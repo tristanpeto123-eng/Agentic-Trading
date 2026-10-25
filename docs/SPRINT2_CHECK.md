@@ -35,3 +35,14 @@ Do not mark S2's external-data acceptance criteria complete without independent 
 
 ## Source provider decision gate
 Choose MT5/OANDA/Dukascopy or another provider only after verifying instrument availability, usage licence, UTC encoding, price basis and whether bid/ask and lower timeframes are available. Broker-dependent executable spreads/slippage are still S3 requirements. Do not label midpoint candles as executable prices.
+
+## Follow-up: direct provider research adapter
+
+- Added `agentic_trading.providers.dukascopy` and opt-in `scripts/fetch_dukascopy_xauusd.py`
+  for bounded direct historical data retrieval or offline conversion of cached `.bi5`
+  M1 BID/ASK files to immutable, UTC M15 bid/ask-separated CSV exports.
+- Added decoder, incomplete-bar, corruption, duplicate, input-bound, crossed-quote,
+  cache verification and zero-network tests. Strict 12-month licensed source
+  verification remains pending; no actual provider dataset has been retrieved here.
+- The public GitHub repository contains source code and tests **only**, not raw
+  Dukascopy data, credentials or redistributable price histories.

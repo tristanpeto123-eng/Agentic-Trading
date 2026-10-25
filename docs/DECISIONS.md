@@ -29,3 +29,11 @@ The CEO elected to keep the independent Agentic Trading GitHub repository **publ
 - D-014: CEO login is bootstrapped interactively with an Argon2-hashed password; signed HttpOnly eight-hour cookies and CSRF protect authenticated writes. Sessions are development-grade until production secret management, persistent revocation, audit/access review and multi-worker throttling are implemented.
 - D-015: Both learning modes persist as plans; student creation does **not** begin training, grant skills or qualify trading. No simulated balance/P&L will be fabricated in the UI.
 - D-016: Public repository is **source visibility only**; frontend and API are not deployed. No GitHub source push constitutes live or paper trading approval.
+
+## Sprint 2 provider adapter (provisional)
+
+Dukascopy public XAUUSD historical BID/ASK M1 archives are a candidate source.
+Offline decoding and opt-in, bounded downloading are implemented for research.
+This **does not** establish acceptable licensing, continuity or executable broker
+prices, and does not change the `quarantined`/`research_eligible=false` policy.
+An independent source audit is still needed before research promotion.

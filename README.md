@@ -64,3 +64,11 @@ Every new student is **unqualified**, **not training**, **not trading**. Learnin
 [Product specification](docs/PRODUCT_SPEC_v1.0.md) · [Sprint tracker](docs/SPRINTS.md) · [Security](docs/SECURITY.md) · [Sprint 1 verification](docs/SPRINT1_CHECK.md).
 
 Entirely independent of Scalp City: no shared imports, datasets, credentials, models or repository dependencies.
+
+### Dukascopy research data adapter (Sprint 2 follow-up)
+
+The optional `scripts/fetch_dukascopy_xauusd.py` script downloads or offline-processes
+provider M1 BID/ASK archives into separated M15 CSVs with per-file SHA-256
+provenance. Downloading requires `--download` and valid permitted access; it
+is not enabled by default. **No real provider export or licence has been validated**;
+all imported CSV files remain quarantined. See `docs/DATA_IMPORT.md`.

@@ -23,3 +23,51 @@ Set `DATA_STORAGE_DIR` to a **private durable disk** separate from the GitHub ch
 
 ## Missing capabilities
 A verified vendor-specific API, source licence evidence review, 365-day/market-session certification, bid/ask spread modelling, M1/tick replay, Parquet partitioning, partial dataset stitching with overlap handling, stale-data cancellation and scheduled ingestion are not complete. Future sprint gates must distinguish structural validity, provider authenticity and economic execution realism.
+
+## Optional direct-source adapter: Dukascopy XAUUSD M1 BID + ASK (research only)
+
+Dukascopy publishes historical prices through its JForex historical-data tools and its
+public `.bi5` datafeed. The adapter is **an independently written reader** of that
+format, not a licensed official client and **does not verify your reuse rights**.
+Its public endpoint format is subject to provider changes. If terms or usage rights
+are uncertain, use Dukascopy's own JForex export process or a licensed broker export.
+Raw quote prices cannot be assumed identical to your intended live broker's fills.
+
+Offline mode is default; place `.bi5` files under `data/dukascopy-cache/` yourself
+or explicitly enable HTTP fetching. The source cache and output are gitignored.
+
+```bash
+python -m pip install -e './backend[dev]'
+# A small test range first. Dates are UTC, end-exclusive, never more than 400 days.
+python scripts/fetch_dukascopy_xauusd.py \
+  --from-date 2025-10-20 --to-date 2025-10-24 \
+  --cache-dir data/dukascopy-cache --out-dir data/exports --download
+
+# Full period example; **not pre-fetched or qualified by this project**.
+python scripts/fetch_dukascopy_xauusd.py \
+  --from-date 2025-10-01 --to-date 2026-10-01 \
+  --cache-dir data/dukascopy-cache --out-dir data/exports --download
+```
+
+The exporter retrieves M1 BID and ASK candles separately, preserving original
+compressed files and their SHA-256 provenance, and emits one **UTC M15** CSV per
+side plus `dukascopy_provenance.json`. It **drops** any M15 period missing one
+of its 15 minute observations, with omissions explicitly reported. It does not
+impute prices, automatically assume missing files are market closures, or claim
+that quote volume represents exchange-traded volume. Oversized, malformed,
+duplicate, implausibly priced or corrupted files fail closed. Every cache entry
+is verified on read and provenance records track fetch URLs and raw hashes.
+
+Import each M15 CSV under Home → Data Engine and set `price_basis` to the matching
+BID or ASK side. Set `provider` to `Dukascopy`, record the source URL as
+`https://datafeed.dukascopy.com/datafeed/`, the script/date range plus
+`dukascopy_provenance.json` in `extraction_reference`, and a genuine terms/permission
+reference in `rights_reference` (not an invented one). The provider/rights field is
+not a licence certification; **all imports remain quarantined**.
+
+The provider download cannot run from this development container because its
+network is inaccessible. No real file has been fetched or admitted to research.
+Before lifting the gate: review your rights, verify original source authenticity,
+confirm BID/ASK agreement and expected market sessions, inspect coverage/omitted
+minutes and source 404s, verify all hashes, and independently test dataset
+quality. Trading and training remain disabled.
