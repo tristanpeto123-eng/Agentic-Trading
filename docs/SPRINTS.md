@@ -7,7 +7,7 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 | S0 | Repo skeleton, contracts, policy tests, docs, provider shortlist, UX wireframes | **Completed — published, verified in GitHub** |
 | S1 | Login, CEO role, student creation, persistent plans, main shell | **Completed — CEO approved, merged into main** |
 | S2 | XAUUSD historical data ingestion, quality & time-safe context | **Implementation in review; provider/rights gate pending** |
-| S3 | Historical execution simulator | Not started |
+| S3 | Historical execution simulator | **Fixture engine implemented, awaiting CI & independent data/source integration** |
 | S4 | Scout A/B, Strategist B, Guardian A | Not started |
 | S5 | Skill/memory engine | Not started |
 | S6 | Neural training and checkpoints | Not started |
@@ -47,3 +47,13 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 **Check:** Full pytest suite, migration, checksum integrity, origin/CSRF, UTC and as-of leaks, no execution endpoints; CI frontend build and browser test. See `docs/SPRINT2_CHECK.md`.
 
 **Act:** Get genuinely licensed real provider export and verify coverage and rights before marking provider gate complete or proceeding to production replay. Synthetic input is never accepted as qualified evidence.
+
+## Sprint 3 — PDCA
+
+**Plan:** Conservative M1 bid/ask historical execution with explicit costs, Guardian/Scout B binding, immutable reproducibility hashes and no future data.
+
+**Do:** Pure `simulator.py`, synthetic-only demo, deterministic trade/ledger records and documentation.
+
+**Check:** Unit/regression scenarios, GitHub backend/frontend/mobile CI and source-integrity gate tracked in `docs/SPRINT3_CHECK.md`.
+
+**Act:** Connect verified S2 data and S4 decision generation only after separate safety gates. Do not equate synthetic fixture profits with investable evidence or start paper trading.

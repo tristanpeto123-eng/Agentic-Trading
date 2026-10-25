@@ -72,3 +72,7 @@ provider M1 BID/ASK archives into separated M15 CSVs with per-file SHA-256
 provenance. Downloading requires `--download` and valid permitted access; it
 is not enabled by default. **No real provider export or licence has been validated**;
 all imported CSV files remain quarantined. See `docs/DATA_IMPORT.md`.
+
+## Sprint 3 — historical replay research engine (review branch)
+
+The optional `agentic_trading.simulator` module replays guarded XAUUSD research instructions against **genuine bid/ask M1-shaped inputs**; its included fixtures are explicitly synthetic. It models spread, two commissions, adverse slippage, stop/target conservatism, gap losses, expiry, missing data, risk limits, immutable ledger records and reproducible fingerprints. No browser/API trading endpoint has been added. To see a synthetic-only smoke demonstration, run `python scripts/demo_historical_replay.py`. Read [Replay Rules](docs/HISTORICAL_REPLAY.md) and [Sprint 3 Review](docs/SPRINT3_CHECK.md). The S2 provenance gate remains open and no unverified import is permitted to qualify a student.
