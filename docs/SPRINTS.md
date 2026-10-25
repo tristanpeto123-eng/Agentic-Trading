@@ -9,7 +9,7 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 | S2 | XAUUSD historical data ingestion, quality & time-safe context | **Implementation in review; provider/rights gate pending** |
 | S3 | Historical execution simulator | **Fixture engine implemented, awaiting CI & independent data/source integration** |
 | S4 | Scout A/B, Strategist B, Guardian A | **Offline deterministic baseline implemented; under review; source gate open** |
-| S5 | Skill/memory engine | Not started |
+| S5 | Skill/memory engine | **Locally verified (89 tests); pending CI / PR review** |
 | S6 | Neural training and checkpoints | Not started |
 | S7 | Independent Examiner | Not started |
 | S8 | Autonomous Academy | Not started |
@@ -67,3 +67,13 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 **Check:** Local regression scenarios, GitHub CI, no data leakage or promotion; see `docs/SPRINT4_CHECK.md`.
 
 **Act:** Use truly independently verified historical data and separate train/test artifacts before making profitability claims; train actual models only in S6.
+
+## Sprint 5 — PDCA
+
+**Plan:** Skill Library with hash-versioned curricula and prerequisites; student-isolated after-cost trade memories; point-in-time recall; no qualification.
+
+**Do:** Typed internal append-only closed-trade record with hash verification, training-only recall with time filtering, database migration, CEO read-only skill and memory pages.
+
+**Check:** 89 local backend tests passed; GitHub frontend + mobile pending. See `docs/SPRINT5_CHECK.md`.
+
+**Act:** Use only independently verified and partitioned market sources in later Exam/learning workflows. No paper/live trading or skill promotion from S5 archive.

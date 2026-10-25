@@ -89,3 +89,9 @@ Neither Scout A nor Scout B is a trained neural model yet (see S6).
 Run `python scripts/demo_research_intelligence.py` for **synthetic-only** output.
 Read [Intelligence Rules](docs/TRADING_INTELLIGENCE.md) and
 [Sprint 4 Checker Report](docs/SPRINT4_CHECK.md).
+
+## Sprint 5 — Skill Library and research memory (draft)
+
+The proposed S5 branch adds a versioned Skill Library (`GET /v1/skills/catalog`), student skill-progress summaries and a closed-trade Good/Bad/Flat episode archive at `GET /v1/students/{id}/memory`. Every archived outcome is derived from net P&L after spread, slippage and fees, with full source/proposal hashes and UTC time visibility. The internal recall function only retrieves **training-partition** experiences available before a decision time, and always remains per student. Synthetic and quarantined episodes **do not qualify** real trading ability. See `docs/SKILLS_MEMORY.md`.
+
+No neural training workers, broker access or paper/live trading are enabled. The independent Examiner is not yet implemented.

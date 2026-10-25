@@ -27,3 +27,9 @@
 - XAUUSD M15 strict CSV import; SHA-256 raw/canonical frozen storage, provenance/quality reports, completed H1/H4 context.
 - Home Data Engine upload panel and quarantined-source status.
 - Preserve research/trading disablement. External licensed provider verification remains pending.
+
+## Sprint 5 — Skill Library and episodic memory (proposed)
+- Versioned market, tactic and risk skills with prerequisite graph and content digest.
+- Immutable research closed-trade episodes, costs-derived Good / Bad / Flat, student-isolated time-safe recall excluding validation/holdout.
+- SQL append-only-by-service archive, tamper checks, idempotent internal writes and Alembic migration.
+- Read-only CEO skill/memory API and responsive student profile panels. Training and qualification remain disabled.

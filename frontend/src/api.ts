@@ -17,6 +17,24 @@ export type HistoricalDataset = {
   quality_report: { rows: number; gap_count: number; calendar_days: number; warnings: string[]; first_open: string; last_close: string }
   ingested_at: string
 }
+export type SkillProgress = {
+  skill_id: string; title: string; version: number; target: boolean
+  experience_count: number; good: number; bad: number; flat: number
+  net_pnl_usd: string; net_r: string; mastery_status: 'unassessed'; research_qualified: false
+  evidence_warning: string
+}
+export type StudentSkillProgress = {
+  student_id: string; catalog_sha256: string; qualification: 'unqualified'; skills: SkillProgress[]
+}
+export type MemoryEpisode = {
+  event_id: string; instrument: string; strategy_version: string; skill_ids: string[]
+  partition: 'train' | 'validation' | 'holdout'; origin: string; available_at: string
+  outcome: 'good' | 'bad' | 'flat'; net_pnl_usd: string; net_r: string
+  gross_pnl_usd: string; fees_usd: string; spread_cost_usd: string
+  slippage_cost_usd: string; close_reason: string; research_qualified: false
+  content_sha256: string
+}
+export type StudentMemory = { student_id: string; episodes: MemoryEpisode[]; qualification: 'unqualified'; note: string }
 export type CEO = { email: string; role: 'ceo'; csrf_token: string }
 export type Dashboard = {
   students_total: number; students_training: number; research_qualified: number; historical_datasets_total: number

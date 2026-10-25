@@ -17,8 +17,10 @@ def test_initial_schema_migration(tmp_path: Path, monkeypatch):
     command.upgrade(cfg, "head")
     engine, _ = new_session_factory(url)
     tables = set(inspect(engine).get_table_names())
-    assert {"ceo_users", "students", "learning_plans", "audit_events", "historical_datasets", "alembic_version"} <= tables
+    assert {"ceo_users", "students", "learning_plans", "audit_events", "historical_datasets", "trade_experiences", "alembic_version"} <= tables
     indexes = {x["name"] for x in inspect(engine).get_indexes("learning_plans")}
     assert "ix_student_plan_version" in indexes
+    experience_indexes = {x["name"] for x in inspect(engine).get_indexes("trade_experiences")}
+    assert {"ix_experience_student_asof", "ix_experience_student_partition"} <= experience_indexes
     command.upgrade(cfg, "head")  # repeat-safe
     engine.dispose()
