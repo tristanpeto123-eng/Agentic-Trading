@@ -15,7 +15,7 @@ Create an offline, point-in-time, inspectable and fail-closed Scout A / Strategi
 - Optional synthetic-only handoff into S3's historical replay; no API or execution endpoints.
 
 ## Check
-- **75 backend regression/scenario tests passed locally** (`PYTHONPATH=backend/src python -m pytest backend/tests -q`) prior to GitHub push. CI must be rechecked after publication.
+- **76 backend regression/scenario tests passed locally** (`PYTHONPATH=backend/src python -m pytest backend/tests -q`) prior to GitHub push. CI must be rechecked after publication.
 - New scenarios exercise upward/downward trend, breakout, range, H1/H4, insufficient data, gaps, invalid timestamps, closed-training-only, source overlap, proposal/trace tampering, altered revision, Guardian veto, synthetic replay and qualification prohibition.
 - Stable outputs on identical immutable inputs; no fabricated trained neural model, profitability rate or verified source rights.
 - CEO governance invariant: source code has no broker adapter, no enable-paper/live endpoint, no qualification promotion.

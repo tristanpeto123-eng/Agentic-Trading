@@ -388,13 +388,17 @@ def guardian_a(proposal: TradeProposal, assessment: TradeAssessment, regime: Reg
     size = ZERO
     # Conservative estimate accounts for possible adverse entry slippage, stop slippage and both commissions.
     distance = abs(proposal.entry_reference - proposal.stop_price)
-    loss_per_oz = distance + 2 * cfg.slippage_usd_per_oz_per_side + 2 * cfg.commission_usd_per_oz_per_side
+    loss_per_oz = (distance + cfg.max_spread_usd_per_oz +
+                   2 * cfg.slippage_usd_per_oz_per_side +
+                   2 * cfg.commission_usd_per_oz_per_side)
     if distance <= ZERO or loss_per_oz <= ZERO:
         reasons.append('INVALID_STOP_DISTANCE')
     else:
         loss_budget = cfg.equity_usd * cfg.max_loss_fraction
         risk_size = loss_budget / loss_per_oz
-        leverage_size = cfg.equity_usd * cfg.max_leverage / (proposal.entry_reference + cfg.slippage_usd_per_oz_per_side)
+        leverage_size = (cfg.equity_usd * cfg.max_leverage /
+                         (proposal.entry_reference + cfg.max_spread_usd_per_oz +
+                          cfg.slippage_usd_per_oz_per_side))
         size = min(risk_size, leverage_size, cfg.max_position_oz)
         size = size.quantize(Decimal('0.0001'), rounding=ROUND_DOWN) if size >= Decimal('0.0001') else ZERO
         if size <= ZERO:

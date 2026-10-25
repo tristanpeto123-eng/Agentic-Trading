@@ -282,3 +282,16 @@ def test_execution_tape_provenance_must_be_distinct_from_signal_source():
         historical_research_replay(d,w,(quote_bar(w.as_of+timedelta(minutes=1)),),
                                    costs(),as_of=w.as_of+timedelta(minutes=2),
                                    execution_source_sha256=w.source_sha256)
+
+
+def test_guardian_size_is_conservative_at_max_allowed_spread():
+    w=window()
+    d=research_decision(w,STUDENT,calibrator(w))
+    assert d.selected and d.candidate and d.guardian
+    p=d.candidate
+    policy=GuardianPolicy()
+    worst_entry=p.entry_reference+policy.max_spread_usd_per_oz+policy.slippage_usd_per_oz_per_side
+    assert d.guardian.quantity_oz*worst_entry <= policy.equity_usd*policy.max_leverage
+    loss_unit=(abs(p.entry_reference-p.stop_price)+policy.max_spread_usd_per_oz+
+               2*policy.slippage_usd_per_oz_per_side+2*policy.commission_usd_per_oz_per_side)
+    assert d.guardian.quantity_oz*loss_unit <= policy.equity_usd*policy.max_loss_fraction
