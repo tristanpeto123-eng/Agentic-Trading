@@ -19,7 +19,7 @@ test('mobile CEO login, student lifecycle, and disabled trading', async ({ page 
 
   const nav = page.locator('nav.bottom-nav')
   await nav.getByRole('button', { name: 'Students' }).click()
-  await expect(page.getByRole('heading', { name: 'Students' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Students', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Create student', exact: true }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('Student name').fill('Orion')
@@ -43,7 +43,7 @@ test('mobile CEO login, student lifecycle, and disabled trading', async ({ page 
   await expect(page.getByText('Learning plan v1')).toBeVisible()
 
   await nav.getByRole('button', { name: 'Trading' }).click()
-  await expect(page.getByRole('heading', { name: 'Trading' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Trading', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Historical testing not yet available' })).toBeVisible()
   await page.getByRole('tab', { name: /Paper/ }).click()
   await expect(page.getByRole('heading', { name: 'Paper trading is disabled' })).toBeVisible()
