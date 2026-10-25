@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from datetime import datetime, timezone
+from hashlib import sha256
+from pathlib import Path
 import time
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
@@ -12,6 +14,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from agentic_trading import __version__
+from agentic_trading.data_engine import (DatasetImport, DataQualityError, ingest_csv, frozen_bytes,
+                                        load_candles, completed_aggregates, parse_iso_utc)
 from agentic_trading.auth import (
     SESSION_COOKIE, SESSION_SECONDS, csrf_token, csrf_valid, make_session, read_session, verify_password
 )
@@ -20,7 +24,7 @@ from agentic_trading.schemas import (
     StudentResponse, name_key,
 )
 from agentic_trading.settings import Settings
-from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, new_session_factory
+from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, new_session_factory
 
 
 class LoginLimiter:
@@ -46,6 +50,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     engine, session_factory = new_session_factory(cfg.database_url)
     # Database schema is managed with Alembic; start with `alembic upgrade head`.
     limiter = LoginLimiter()
+    data_root = Path(cfg.data_dir) if cfg.data_dir else Path.cwd() / "data_store"
     api = FastAPI(title="Agentic Trading", version=__version__, description="CEO + student foundation. Trading remains disabled.")
     api.add_middleware(
         CORSMiddleware, allow_origins=list(cfg.allowed_origins), allow_credentials=True,
@@ -98,15 +103,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @api.get("/health")
     def health():
-        return {"status": "ok", "component": "api", "sprint": "S1"}
+        return {"status": "ok", "component": "api", "sprint": "S2"}
 
     @api.get("/v1/capabilities")
     def capabilities():
         return {
-            "name": "Agentic Trading", "stage": "sprint_1_app_foundation",
+            "name": "Agentic Trading", "stage": "sprint_2_data_ingestion",
             "research_training_enabled": False, "historical_execution_enabled": False,
             "paper_trading_enabled": False, "live_trading_enabled": False,
             "broker_connected": False, "student_creation_enabled": True,
+            "historical_data_import_enabled": True, "research_data_qualified": False,
         }
 
     @api.post("/v1/auth/login")
@@ -137,14 +143,91 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @api.get("/v1/dashboard")
     def dashboard(_: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):
         total = session.scalar(select(func.count(Student.id))) or 0
+        count = session.scalar(select(func.count(HistoricalDataset.id))) or 0
         return {
-            "students_total": total, "students_training": 0, "research_qualified": 0,
-            "research_status": "not_started", "market_data_status": "not_connected",
+            "students_total": total, "historical_datasets_total": count, "students_training": 0, "research_qualified": 0,
+            "research_status": "not_started", "market_data_status": "imports_quarantined" if count else "not_connected",
             "historical_trading": "disabled", "paper_trading": "disabled",
             "live_trading": "disabled", "system_health": "api_online",
             "net_pnl": None, "open_positions": None,
-            "attention": ["Verified historical market data not yet configured (Sprint 2)"],
+            "attention": ["Historical imports require independent provider/rights verification before training"],
         }
+
+    def dataset_view(row: HistoricalDataset) -> dict:
+        return {"id": row.id, "instrument": row.source_manifest["instrument"],
+                "timeframe": row.source_manifest["timeframe"], "provider": row.source_manifest["provider"],
+                "source_hash": row.source_hash, "canonical_hash": row.canonical_hash,
+                "source_manifest": row.source_manifest, "quality_report": row.quality_report,
+                "state": row.state, "research_eligible": False, "ingested_at": row.ingested_at}
+
+    @api.get("/v1/datasets")
+    def datasets(_: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):
+        return [dataset_view(row) for row in session.scalars(
+            select(HistoricalDataset).order_by(HistoricalDataset.ingested_at.desc(), HistoricalDataset.id.desc())
+        ).all()]
+
+    @api.post("/v1/datasets/import", status_code=201)
+    def import_dataset(payload: DatasetImport, user: CEO = Depends(require_csrf), session: Session = Depends(db)):
+        content = payload.csv_content.encode("utf-8")
+        digest = sha256(content).hexdigest()
+        manifest = payload.source.model_dump(mode="json")
+        existing = session.scalar(select(HistoricalDataset).where(HistoricalDataset.source_hash == digest))
+        if existing is not None:
+            if existing.source_manifest != manifest:
+                raise HTTPException(status_code=409, detail="Identical raw CSV already imported with different provenance")
+            return dataset_view(existing)
+        try:
+            candles, quality, canonical = ingest_csv(payload.csv_content, payload.source.acquired_at)
+            raw_path, canonical_path = frozen_bytes(data_root, digest, content, canonical)
+        except (DataQualityError, OSError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        row = HistoricalDataset(source_hash=digest, canonical_hash=sha256(canonical).hexdigest(),
+                                source_manifest=manifest, quality_report=quality,
+                                raw_path=raw_path, canonical_path=canonical_path,
+                                state="quarantined")
+        session.add(row)
+        try:
+            session.flush()
+            session.add(AuditEvent(actor_id=user.id, action="dataset.imported", subject_id=row.id,
+                                   detail={"source_hash": digest, "rows": len(candles), "state": "quarantined"}))
+            session.commit()
+        except IntegrityError as exc:
+            session.rollback()
+            raise HTTPException(status_code=409, detail="Dataset already imported concurrently") from exc
+        return dataset_view(row)
+
+    @api.get("/v1/datasets/{dataset_id}")
+    def dataset_detail(dataset_id: str, _: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):
+        row = session.get(HistoricalDataset, dataset_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Dataset not found")
+        return dataset_view(row)
+
+    @api.get("/v1/datasets/{dataset_id}/context")
+    def historical_context(dataset_id: str, as_of: str, _: tuple[CEO, dict] = Depends(current_ceo),
+                           session: Session = Depends(db)):
+        row = session.get(HistoricalDataset, dataset_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Dataset not found")
+        try:
+            now = parse_iso_utc(as_of)
+            # Prevent artifact path escapes even if DB is corrupted.
+            root = data_root.resolve()
+            target = (root / row.canonical_path).resolve()
+            if not target.is_relative_to(root):
+                raise DataQualityError("Invalid artifact path")
+            source = (root / row.raw_path).resolve()
+            if not source.is_relative_to(root) or sha256(source.read_bytes()).hexdigest() != row.source_hash:
+                raise DataQualityError("Raw source checksum mismatch")
+            candles = load_candles(root, row.canonical_path, row.canonical_hash)
+        except (DataQualityError, OSError) as exc:
+            raise HTTPException(status_code=409, detail=f"Data integrity check failed: {exc}") from exc
+        eligible = [c for c in candles if c.available_at <= now]
+        h1 = completed_aggregates(candles, now, 60)
+        h4 = completed_aggregates(candles, now, 240)
+        return {"dataset_id": row.id, "as_of": now, "research_eligible": False,
+                "m15": [x.as_dict() for x in eligible[-16:]], "h1": h1[-8:], "h4": h4[-4:],
+                "note": "Only completed candles are visible. This quarantined dataset cannot qualify research."}
 
     @api.get("/v1/students", response_model=list[StudentResponse])
     def students(_: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):

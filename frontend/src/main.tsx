@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { createRoot } from 'react-dom/client'
-import { Activity, ArrowLeft, ArrowRight, BarChart3, BookOpen, Bot, Check, ChevronRight, ClipboardList, Database, GraduationCap, Home, Layers3, LockKeyhole, LogOut, Plus, RefreshCw, ShieldCheck, ShieldOff, Sparkles, UserPlus, Users, X, AlertCircle, Settings2, BookMarked, Search, Target, Clock3 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, BarChart3, BookOpen, Bot, Check, ChevronRight, ClipboardList, Database, GraduationCap, Home, Layers3, LockKeyhole, LogOut, Plus, RefreshCw, ShieldCheck, ShieldOff, Sparkles, UserPlus, Users, X, AlertCircle, Settings2, BookMarked, Search, Target, Clock3, FileUp, FileCheck2 } from 'lucide-react'
 import { api, APIError, MARKETS, SKILLS, setCsrf } from './api'
-import type { CEO, Dashboard, LearningPlan, Market, Mode, PlanInput, Skill, Student, StudentInput, Tab, TradingMode } from './api'
+import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, PlanInput, Skill, Student, StudentInput, Tab, TradingMode } from './api'
 import './styles.css'
 
 const NUM_FORMAT = new Intl.NumberFormat('en-GB')
@@ -168,16 +167,74 @@ function StudentProfile({ student, onBack, onEdit }: { student: Student; onBack:
 function Header({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
   return <div className="page-header"><div><p className="eyebrow">CEO CONSOLE / {title.toUpperCase()}</p><h1>{title}</h1><p className="page-subtitle">{description}</p></div>{action && <div className="header-action">{action}</div>}</div>
 }
+function DataEnginePanel() {
+  const [datasets, setDatasets] = useState<HistoricalDataset[]>([])
+  const [showImport, setShowImport] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [provider, setProvider] = useState('')
+  const [sourceUrl, setSourceUrl] = useState('')
+  const [rights, setRights] = useState('')
+  const [extractRef, setExtractRef] = useState('')
+  const [basis, setBasis] = useState<'bid'|'ask'|'mid'|'trade'>('mid')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const load = useCallback(async () => {
+    try { setDatasets(await api<HistoricalDataset[]>('/v1/datasets')) }
+    catch (err) { setError(err instanceof Error ? err.message : 'Unable to load dataset records') }
+  }, [])
+  useEffect(() => { void load() }, [load])
+  const importData = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!selectedFile) { setError('Select an M15 CSV file'); return }
+    if (selectedFile.size > 12 * 1024 * 1024) { setError('File exceeds 12 MiB import limit'); return }
+    setBusy(true); setError(''); setNotice('')
+    try {
+      const content = await selectedFile.text()
+      const dataset = await api<HistoricalDataset>('/v1/datasets/import', 'POST', {
+        source: { provider, source_url: sourceUrl, rights_reference: rights,
+          extraction_reference: extractRef, acquired_at: new Date().toISOString(),
+          instrument: 'XAUUSD', timeframe: 'M15', price_basis: basis,
+          timezone: 'UTC', evidence_kind: 'historical' }, csv_content: content
+      })
+      setNotice(`Import recorded: ${dataset.quality_report.rows.toLocaleString('en-GB')} bars. Quarantined until provenance verification.`)
+      setShowImport(false); setSelectedFile(null); await load()
+    } catch (err) { setError(err instanceof Error ? err.message : 'Import rejected') }
+    finally { setBusy(false) }
+  }
+  return <section className="surface panel data-engine-panel" aria-label="Historical data engine">
+    <div className="panel-heading"><div><p className="eyebrow">HISTORICAL DATA · SPRINT 02</p><h3>Data Engine</h3></div><button className="btn btn-secondary" onClick={() => setShowImport(!showImport)}><FileUp size={16}/>{showImport ? 'Close' : 'Import CSV'}</button></div>
+    <div className="data-engine-content">
+      <p className="data-explainer">Import genuine XAUUSD M15 exports with source details. Every imported dataset is frozen, checked and <strong>quarantined</strong> until its provenance and usage rights are independently verified. No training or trading is enabled.</p>
+      {notice && <p className="data-notice" role="status"><FileCheck2 size={15}/>{notice}</p>}
+      {error && <p className="message-error" role="alert"><AlertCircle size={16}/>{error}</p>}
+      {showImport && <form className="data-import-form" onSubmit={importData}>
+        <label>CSV file — UTC M15, timestamp_open/open/high/low/close[/volume]<input type="file" accept=".csv,text/csv" required onChange={e => setSelectedFile(e.target.files?.[0] ?? null)}/></label>
+        <label>Source provider<input value={provider} onChange={e=>setProvider(e.target.value)} required minLength={3} maxLength={120} placeholder="Provider name"/></label>
+        <label>Export or source URL (HTTPS)<input type="url" value={sourceUrl} onChange={e=>setSourceUrl(e.target.value)} required placeholder="https://provider.example/..."/></label>
+        <label>Export reference<input value={extractRef} onChange={e=>setExtractRef(e.target.value)} required minLength={3} placeholder="Broker download ID / export command"/></label>
+        <label>Usage rights reference<input value={rights} onChange={e=>setRights(e.target.value)} required minLength={8} placeholder="Provider licence or agreement reference"/></label>
+        <label>OHLC price convention<select value={basis} onChange={e=>setBasis(e.target.value as typeof basis)}><option value="mid">Mid</option><option value="bid">Bid</option><option value="ask">Ask</option><option value="trade">Trades</option></select></label>
+        <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Validating…' : 'Validate & freeze dataset'}</button>
+        <small>Maximum 12 MiB. Timestamps must be explicit UTC and bars must be closed. No missing prices are invented.</small>
+      </form>}
+      <div className="dataset-list">{!datasets.length && <div className="dataset-empty"><Database size={18}/><span>No historical datasets imported yet.</span></div>}
+        {datasets.map(d=><div className="dataset-row" key={d.id}><div className="dataset-summary"><strong>{d.instrument} · {d.timeframe}</strong><span>{d.provider} · {d.quality_report.rows.toLocaleString('en-GB')} bars · {d.quality_report.calendar_days.toFixed(1)} days</span><small>{d.quality_report.gap_count} detected gaps · SHA {d.source_hash.slice(0,12)}…</small></div><span className="pill pill-amber">Quarantined</span></div>)}
+      </div>
+    </div>
+  </section>
+}
 function HomePage({ dashboard, onNew, onStudents }: { dashboard: Dashboard | null; onNew: () => void; onStudents: () => void }) {
   const rows = [{ label: 'Enrolled students', value: dashboard ? NUM_FORMAT.format(dashboard.students_total) : '—', icon: Users, detail: 'Created AI identities' },
     { label: 'Students training', value: dashboard ? NUM_FORMAT.format(dashboard.students_training) : '—', icon: GraduationCap, detail: 'Workers not enabled' },
     { label: 'Qualified strategies', value: dashboard ? NUM_FORMAT.format(dashboard.research_qualified) : '—', icon: ShieldCheck, detail: 'Requires independent exams' },
     { label: 'System status', value: dashboard ? 'Online' : '—', icon: Activity, detail: 'API connection status' }]
   return <div className="page-enter"><Header title="Overview" description="Your research command centre. A clear view of what exists, what is learning and what needs your decision." action={<button className="btn btn-primary" onClick={onNew}><Plus size={17}/> New student</button>}/>
-    <div className="scope-banner"><span className="scope-dot"/><span><strong>Research environment</strong> · No market feed, broker account or trading permission is active.</span><span className="scope-stage">SPRINT 01</span></div>
+    <div className="scope-banner"><span className="scope-dot"/><span><strong>Research environment</strong> · No market feed, broker account or trading permission is active.</span><span className="scope-stage">SPRINT 02</span></div>
     <div className="metrics-grid">{rows.map(row => <div className="surface metric-card" key={row.label}><div className="metric-top"><span>{row.label}</span><row.icon size={19}/></div><strong>{row.value}</strong><small>{row.detail}</small></div>)}</div>
     <div className="dashboard-grid"><section className="surface panel overview-main"><div className="panel-heading"><div><p className="eyebrow">FINANCIAL PERFORMANCE</p><h3>Trading overview</h3></div><span className="pill pill-muted"><ShieldOff size={13}/> Disabled</span></div><div className="scope-selector"><span>Historical</span><span>Paper</span><span>Live</span></div><div className="blank-chart"><BarChart3 size={30} strokeWidth={1.2}/><strong>No performance data yet</strong><p>Equity curves, realised net P&amp;L and trade journals require verified market data and a validated simulator.</p><small>Not zero profit. No financial results exist.</small></div></section>
-      <div className="dashboard-aside"><section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">ACTION CENTRE</p><h3>Needs attention</h3></div><span className="count-badge">{dashboard?.attention.length ?? 0}</span></div><div className="notice-list"><div className="notice-item"><div className="notice-icon"><Database size={17}/></div><div><strong>Historical data not connected</strong><p>Verified XAUUSD data onboarding belongs to Sprint 2.</p><span>Research prerequisites</span></div><ChevronRight size={16}/></div></div></section><section className="surface panel quick-panel"><div className="panel-heading"><div><p className="eyebrow">ACADEMY</p><h3>Start building your cohort</h3></div><Users size={19}/></div><div className="panel-content"><p className="muted">Give your students identities and choose their learning direction before data and training come online.</p><button className="btn btn-secondary btn-wide" onClick={onStudents}>Open student academy <ArrowRight size={16}/></button></div></section></div></div>
+      <div className="dashboard-aside"><section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">ACTION CENTRE</p><h3>Needs attention</h3></div><span className="count-badge">{dashboard?.attention.length ?? 0}</span></div><div className="notice-list"><div className="notice-item"><div className="notice-icon"><Database size={17}/></div><div><strong>Historical data onboarding</strong><p>Import XAUUSD data and review quality; source verification is still required.</p><span>Research prerequisites</span></div><ChevronRight size={16}/></div></div></section><section className="surface panel quick-panel"><div className="panel-heading"><div><p className="eyebrow">ACADEMY</p><h3>Start building your cohort</h3></div><Users size={19}/></div><div className="panel-content"><p className="muted">Give your students identities and choose their learning direction before data and training come online.</p><button className="btn btn-secondary btn-wide" onClick={onStudents}>Open student academy <ArrowRight size={16}/></button></div></section></div></div>
+    <DataEnginePanel/>
     <div className="footer-note"><LockKeyhole size={14}/> No orders, positions, broker balances or live deployment controls are available in this sprint.</div>
   </div>
 }
@@ -253,7 +310,7 @@ function App() {
   if (!ceo) return <Login onLogin={user => { setCeo(user); setTab('home'); setActiveStudent(null) }}/>
   const nav: { id: Tab; label: string; icon: typeof Home }[] = [ { id: 'home', label: 'Home', icon: Home }, { id: 'students', label: 'Students', icon: Users }, { id: 'trading', label: 'Trading', icon: BarChart3 } ]
   return <div className="app-shell">
-    <aside className="sidebar"><div className="brand"><span className="brand-symbol"><Layers3 size={19}/></span><span>AGENTIC<strong>TRADING</strong></span></div><div className="sidebar-section"><p className="eyebrow">WORKSPACE</p><nav aria-label="Main navigation">{nav.map(n => <button key={n.id} className={`sidebar-link ${tab === n.id ? 'active' : ''}`} onClick={() => navigate(n.id)}><n.icon size={18}/>{n.label}{tab === n.id && <span className="nav-indicator"/>}</button>)}</nav></div><div className="sidebar-spacer"/><div className="side-system"><span className="online-dot"/><span>Research workspace</span><small>Development / S1</small></div><button className="sidebar-user" onClick={logout} title="Sign out"><span className="user-avatar">CEO</span><span><strong>Chief Executive</strong><small>{ceo.email}</small></span><LogOut size={17}/></button></aside>
+    <aside className="sidebar"><div className="brand"><span className="brand-symbol"><Layers3 size={19}/></span><span>AGENTIC<strong>TRADING</strong></span></div><div className="sidebar-section"><p className="eyebrow">WORKSPACE</p><nav aria-label="Main navigation">{nav.map(n => <button key={n.id} className={`sidebar-link ${tab === n.id ? 'active' : ''}`} onClick={() => navigate(n.id)}><n.icon size={18}/>{n.label}{tab === n.id && <span className="nav-indicator"/>}</button>)}</nav></div><div className="sidebar-spacer"/><div className="side-system"><span className="online-dot"/><span>Research workspace</span><small>Development / S2</small></div><button className="sidebar-user" onClick={logout} title="Sign out"><span className="user-avatar">CEO</span><span><strong>Chief Executive</strong><small>{ceo.email}</small></span><LogOut size={17}/></button></aside>
     <div className="workspace"><header className="topbar"><div className="topbar-left"><span className="breadcrumb-brand">Agentic Trading</span><ChevronRight size={14}/><span>{tab === 'students' && activeStudent ? activeStudent.name : titleCase(tab)}</span></div><div className="topbar-right"><span className="environment-tag"><span className="online-dot"/> RESEARCH</span><button className="icon-button top-refresh" onClick={() => void refresh()} disabled={loading} title="Refresh data" aria-label="Refresh"><RefreshCw size={17} className={loading ? 'spin' : ''}/></button><span className="top-avatar">CEO</span></div></header>
       <main className="main-content">
         {error && <div className="message-error page-error" role="alert"><AlertCircle size={17}/>{error}<button onClick={() => setError('')} aria-label="Dismiss"><X size={16}/></button></div>}

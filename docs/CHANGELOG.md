@@ -22,3 +22,8 @@
 - 23 local/backend CI checks, frontend production build and mobile Chromium Playwright full-flow test passed.
 
 **Release scope:** Source code on Sprint 1 draft PR; owner review and merge required. Not deployed. All trading execution disabled. Production infrastructure/security and Postgres integration are separate gates.
+
+## 2026-10-25 — Sprint 2 implementation
+- XAUUSD M15 strict CSV import; SHA-256 raw/canonical frozen storage, provenance/quality reports, completed H1/H4 context.
+- Home Data Engine upload panel and quarantined-source status.
+- Preserve research/trading disablement. External licensed provider verification remains pending.

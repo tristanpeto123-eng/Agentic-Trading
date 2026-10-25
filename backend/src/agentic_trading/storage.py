@@ -50,6 +50,19 @@ class LearningPlan(Base):
     __table_args__ = (Index("ix_student_plan_version", "student_id", "version", unique=True),)
 
 
+class HistoricalDataset(Base):
+    __tablename__ = "historical_datasets"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    source_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    canonical_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_manifest: Mapped[dict] = mapped_column(JSON, nullable=False)
+    quality_report: Mapped[dict] = mapped_column(JSON, nullable=False)
+    raw_path: Mapped[str] = mapped_column(String(300), nullable=False)
+    canonical_path: Mapped[str] = mapped_column(String(300), nullable=False)
+    state: Mapped[str] = mapped_column(String(40), default="quarantined", nullable=False)
+    ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class AuditEvent(Base):
     __tablename__ = "audit_events"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))

@@ -27,3 +27,7 @@ coverage/
 frontend/test-results/
 frontend/playwright-report/
 frontend/screenshots/
+
+# S2 provider datasets, immutable raw source files and parsed market history
+data_store/
+data/
