@@ -26,7 +26,7 @@ The content hash covers the canonical full payload, and denormalized indexes are
 
 ## Time-safe recall and separation
 
-The Recall Engine accepts an explicit UTC `as_of` timestamp. It returns **only closed, available, training-partition episodes** belonging to the specified student. Optional skill, market, regime and excluded-source filters narrow matching. It never retrieves validation/holdout outcomes or episodes where `available_at > as_of`. All archive reads check stored payload integrity and fail closed on mismatches.
+The Recall Engine accepts an explicit UTC `as_of` timestamp. It returns **only closed, available, training-partition episodes** belonging to the specified student. Optional skill, market, regime and excluded-source filters narrow matching. It never retrieves validation/holdout outcomes or episodes where `available_at > as_of`. The CEO API also seals validation/holdout episodes from both the archive display and skill-statistics calculations until a future independent Examiner explicitly releases those results. All archive reads check stored payload integrity and fail closed on mismatches.
 
 **Important limitations:** Data partition membership is currently a trusted internal research-worker assignment; independent immutable partition manifests and embargo/purging checks belong to S7. Long-lived training workers and full memory consolidation are S6/S8. S5 cannot validate that archived gross P&L was produced by a genuine, independently reproducible market replay; provenance checks ensure correct matching to S2 source metadata only. No training or qualification relies on S5 data until the independent data and Examiner gates pass.
 
@@ -34,7 +34,7 @@ The Recall Engine accepts an explicit UTC `as_of` timestamp. It returns **only c
 
 - `GET /v1/skills/catalog` — versioned skills, prerequisites, catalogue hash.
 - `GET /v1/students/{student_id}/skills` — targets and archive statistics, **mastery always `unassessed`**.
-- `GET /v1/students/{student_id}/memory?limit=50` — recent episodes with after-cost outcome/magnitude and explicit research-only provenance. Limit range 1–100.
+- `GET /v1/students/{student_id}/memory?limit=50` — recent **training-partition** episodes with after-cost outcome/magnitude and explicit research-only provenance. Limit range 1–100.
 
 Existing CEO cookie authentication and CSRF controls remain unchanged. No memory-write route is mounted.
 

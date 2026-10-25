@@ -118,7 +118,10 @@ def test_recall_is_asof_scoped_and_no_holdout_or_validation_leakage(setup):
         assert recalled[0]['research_qualified'] is False
         assert recall_training_examples(session,sid,as_of=START+timedelta(days=2),exclude_source_sha256=SRC) == []
         assert recall_training_examples(session,sid,as_of=START+timedelta(hours=1),market_regime='CHOP') == []
-        assert len(read_student_memory(session,sid)) == 4
+        assert len(read_student_memory(session,sid)) == 2
+        assert len(read_student_memory(session,sid,include_sealed=True)) == 4
+        student=session.get(Student,sid)
+        assert next(s for s in student_skill_progress(session,student)['skills'] if s['skill_id']=='tactic:trend')['experience_count']==2
         with pytest.raises(ValueError, match='UTC'):
             recall_training_examples(session,sid,as_of=datetime(2025,8,4))
 
@@ -249,3 +252,15 @@ def test_memory_survives_database_reopen_and_plan_switch(setup):
         assert trend['target'] is False
         assert trend['experience_count'] == 1
     engine.dispose()
+
+
+def test_sealed_exam_outcomes_never_appear_in_ceo_api_or_stats(setup):
+    cfg, sid, factory = setup
+    with factory() as session:
+        append_episode(session, episode(UUID(sid), partition=ExamPartition.HOLDOUT, gross='999999'))
+        session.commit()
+    client = TestClient(create_app(cfg))
+    response = client.post('/v1/auth/login', json={'email':'owner@example.org','password':'long-local-test-password'})
+    assert response.status_code == 200
+    assert client.get(f'/v1/students/{sid}/memory').json()['episodes'] == []
+    assert all(row['experience_count'] == 0 for row in client.get(f'/v1/students/{sid}/skills').json()['skills'])

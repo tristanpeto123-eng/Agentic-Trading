@@ -230,9 +230,17 @@ def _format(row: TradeExperience) -> dict:
     }
 
 
-def read_student_memory(session: Session, student_id: str, *, limit: int = 100) -> list[dict]:
-    rows = session.scalars(select(TradeExperience).where(TradeExperience.student_id == student_id)
-                           .order_by(TradeExperience.available_at.desc(), TradeExperience.id.desc()).limit(limit)).all()
+def read_student_memory(session: Session, student_id: str, *, limit: int = 100,
+                        include_sealed: bool = False) -> list[dict]:
+    """CEO view hides validation and holdout outcomes until independent Examiner release.
+
+    `include_sealed=True` is for trusted internal integrity audits, not the CEO API.
+    """
+    query = select(TradeExperience).where(TradeExperience.student_id == student_id)
+    if not include_sealed:
+        query = query.where(TradeExperience.partition == ExamPartition.TRAIN.value)
+    rows = session.scalars(query.order_by(TradeExperience.available_at.desc(),
+                                          TradeExperience.id.desc()).limit(limit)).all()
     return [_format(row) for row in rows]
 
 
@@ -273,7 +281,8 @@ def student_skill_progress(session: Session, student: Student) -> dict:
     plans = sorted(student.plans, key=lambda p: p.version)
     latest = plans[-1]
     targets = [f'market:{m}' for m in latest.markets] + [f'tactic:{s}' if s != 'risk_management' else 'risk:risk_management' for s in latest.skills]
-    rows = session.scalars(select(TradeExperience).where(TradeExperience.student_id == student.id)
+    rows = session.scalars(select(TradeExperience).where(TradeExperience.student_id == student.id,
+                                                       TradeExperience.partition == ExamPartition.TRAIN.value)
                            .order_by(TradeExperience.available_at.asc(), TradeExperience.id.asc())).all()
     per_skill = {}
     # Validate every archived event, not merely those matching the current targets.

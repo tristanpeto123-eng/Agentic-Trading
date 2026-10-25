@@ -16,7 +16,7 @@ Build per-student skill catalogues, individual research Good/Bad experiences and
 
 ## Check
 
-- **Local backend:** 89 tests passed (pytest), including time visibility, closed outcomes, costs arithmetic, idempotency, provenance restrictions, cross-student isolation, archive tampering, plan history preservation, CEO API auth/GET-only boundaries and migration.
+- **Local backend:** 90 tests passed (pytest), including time visibility, closed outcomes, costs arithmetic, idempotency, provenance restrictions, cross-student isolation, archive tampering, plan history preservation, CEO API auth/GET-only boundaries and migration.
 - **Local frontend:** strict TS / Vite build unavailable without npm dependencies; GitHub CI required.
 - **GitHub CI:** pending PR push, then run backend / frontend / mobile verification.
 - **Real-data evidence:** no independently verified licensed XAUUSD dataset, remains quarantined.

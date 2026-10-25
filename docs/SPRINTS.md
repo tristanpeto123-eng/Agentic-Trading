@@ -9,7 +9,7 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 | S2 | XAUUSD historical data ingestion, quality & time-safe context | **Implementation in review; provider/rights gate pending** |
 | S3 | Historical execution simulator | **Fixture engine implemented, awaiting CI & independent data/source integration** |
 | S4 | Scout A/B, Strategist B, Guardian A | **Offline deterministic baseline implemented; under review; source gate open** |
-| S5 | Skill/memory engine | **Locally verified (89 tests); pending CI / PR review** |
+| S5 | Skill/memory engine | **Locally verified (90 tests); pending CI / PR review** |
 | S6 | Neural training and checkpoints | Not started |
 | S7 | Independent Examiner | Not started |
 | S8 | Autonomous Academy | Not started |
