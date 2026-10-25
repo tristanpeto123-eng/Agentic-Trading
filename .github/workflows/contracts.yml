@@ -1,4 +1,4 @@
-name: Sprint 0 - Foundation Tests
+name: Agentic Trading - Sprint 1 Verification
 on:
   push:
   pull_request:
@@ -12,7 +12,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install backend and development dependencies
+      - name: Install backend
         run: python -m pip install -e './backend[dev]'
-      - name: Test foundation
+      - name: Test API, migrations and contracts
         run: python -m pytest backend/tests -q
+      - name: Audit no broker execution endpoints
+        run: python -c "from agentic_trading.api import app; assert not any('orders' in r.path or 'broker' in r.path for r in app.routes)"
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install frontend
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+      - name: Strict TypeScript + production build
+        working-directory: frontend
+        run: npm run build

@@ -1,0 +1,271 @@
+import React, { useCallback, useEffect, useState } from 'react'
+import { ArrowLeft, ArrowRight, BarChart3, BookOpen, Bot, Check, ChevronRight, ClipboardList, Database, GraduationCap, Home, Layers3, LockKeyhole, LogOut, Plus, RefreshCw, ShieldCheck, ShieldOff, Sparkles, UserPlus, Users, X, AlertCircle, Settings2, BookMarked, Search, Target, Clock3 } from 'lucide-react'
+import { api, APIError, MARKETS, SKILLS, setCsrf } from './api'
+import type { CEO, Dashboard, LearningPlan, Market, Mode, PlanInput, Skill, Student, StudentInput, Tab, TradingMode } from './api'
+import './styles.css'
+
+const NUM_FORMAT = new Intl.NumberFormat('en-GB')
+function friendlyDate(date: string): string {
+  const value = new Date(date)
+  return Number.isNaN(value.getTime()) ? '—' : value.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+const shortId = (student: Student) => student.id.split('-')[0].toUpperCase()
+const titleCase = (value: string) => value.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase())
+function ModePill({ mode }: { mode: Mode }) {
+  return <span className={`pill ${mode === 'autonomous' ? 'pill-blue' : 'pill-amber'}`}>
+    {mode === 'autonomous' ? <Sparkles size={12} /> : <Target size={12} />} {mode === 'autonomous' ? 'Autonomous' : 'CEO-directed'}
+  </span>
+}
+function EmptyIcon({ icon: Icon }: { icon: typeof Users }) {
+  return <div className="empty-icon"><Icon size={22} strokeWidth={1.65} /></div>
+}
+function Login({ onLogin }: { onLogin: (ceo: CEO) => void }) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setBusy(true); setError('')
+    try {
+      const user = await api<CEO>('/v1/auth/login', 'POST', { email, password })
+      setCsrf(user.csrf_token)
+      onLogin(user)
+    } catch (err) { setError(err instanceof Error ? err.message : 'Login failed') }
+    finally { setBusy(false) }
+  }
+  return <main className="login-layout">
+    <div className="login-art" aria-hidden="true">
+      <div className="visual-grid" />
+      <div className="login-art-body">
+        <div className="brand brand-large"><span className="brand-symbol"><Layers3 size={21}/></span> AGENTIC<span>TRADING</span></div>
+        <p className="eyebrow">INTELLIGENCE, UNDER YOUR CONTROL</p>
+        <h1>Train the system.<br/><em>Keep the authority.</em></h1>
+        <p className="login-description">Your command centre for developing, evaluating and overseeing independent AI trading students.</p>
+        <div className="login-steps"><span>01 &nbsp; LEARN</span><span>02 &nbsp; VALIDATE</span><span>03 &nbsp; DECIDE</span></div>
+      </div>
+    </div>
+    <div className="login-panel">
+      <div className="login-card">
+        <span className="login-lock"><LockKeyhole size={19}/></span>
+        <p className="eyebrow">CEO ACCESS ONLY</p>
+        <h2>Welcome back.</h2>
+        <p className="muted">Sign in to your private operating console.</p>
+        <form onSubmit={submit} className="login-form">
+          <label>Email address<input type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} required placeholder="ceo@example.com" /></label>
+          <label>Password<input type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="Enter your password" /></label>
+          {error && <p className="message-error" role="alert"><AlertCircle size={15} /> {error}</p>}
+          <button className="btn btn-primary btn-wide" disabled={busy}>{busy ? 'Signing in…' : 'Access console'} <ArrowRight size={16}/></button>
+        </form>
+        <div className="login-footer"><ShieldCheck size={15}/> Research only. No broker or trading is connected.</div>
+      </div>
+      <div className="login-bottom">Agentic Trading <span>·</span> Research environment v0.1</div>
+    </div>
+  </main>
+}
+
+const newForm = (): StudentInput => ({ name: '', mode: 'autonomous', markets: [], skills: [] })
+function Selector({ form, onChange }: { form: StudentInput | PlanInput; onChange: (v: StudentInput | PlanInput) => void }) {
+  const toggleMarket = (market: Market) => onChange({ ...form, markets: form.markets.includes(market) ? form.markets.filter(x => x !== market) : [...form.markets, market] })
+  const toggleSkill = (skill: Skill) => onChange({ ...form, skills: form.skills.includes(skill) ? form.skills.filter(x => x !== skill) : [...form.skills, skill] })
+  return <>
+    <div className="field-set">
+      <label className="form-label">Learning direction</label>
+      <div className="mode-options" role="group" aria-label="Learning direction">
+        <button type="button" className={`mode-option ${form.mode === 'autonomous' ? 'selected' : ''}`} onClick={() => onChange({ ...form, mode: 'autonomous', markets: [], skills: [] })}>
+          <Sparkles size={19}/><strong>Autonomous</strong><span>Academy decides what to research.</span>
+        </button>
+        <button type="button" className={`mode-option ${form.mode === 'directed' ? 'selected' : ''}`} onClick={() => onChange({ ...form, mode: 'directed' })}>
+          <Target size={19}/><strong>CEO-directed</strong><span>You choose markets and skills.</span>
+        </button>
+      </div>
+    </div>
+    {form.mode === 'directed' && <>
+      <div className="field-set">
+        <label className="form-label">Target markets <span className="required">· choose at least one</span></label>
+        <div className="chip-grid">{MARKETS.map(m => <button type="button" key={m.id} className={`pick-chip ${form.markets.includes(m.id) ? 'picked' : ''}`} onClick={() => toggleMarket(m.id)} aria-pressed={form.markets.includes(m.id)}>
+          <span>{m.label}<small>{m.family}</small></span>{form.markets.includes(m.id) ? <Check size={15}/> : <Plus size={14}/>}</button>)}</div>
+      </div>
+      <div className="field-set">
+        <label className="form-label">Target skills <span className="required">· choose at least one</span></label>
+        <div className="skill-chips">{SKILLS.map(s => <button type="button" key={s.id} className={`skill-chip ${form.skills.includes(s.id) ? 'picked' : ''}`} onClick={() => toggleSkill(s.id)} aria-pressed={form.skills.includes(s.id)}>{form.skills.includes(s.id) ? <Check size={13}/> : <Plus size={13}/>} {s.label}</button>)}</div>
+      </div>
+    </>}
+  </>
+}
+function CreateStudent({ onClose, onCreate }: { onClose: () => void; onCreate: (s: StudentInput) => Promise<void> }) {
+  const [form, setForm] = useState<StudentInput>(newForm)
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+  const generate = () => {
+    const names = ['Orion', 'Nova', 'Atlas', 'Kairo', 'Vortex', 'Lyra', 'Axiom', 'Solace']
+    const rand = new Uint32Array(1)
+    crypto.getRandomValues(rand)
+    setForm(f => ({ ...f, name: `${names[rand[0] % names.length]} ${String(rand[0] % 10000).padStart(4, '0')}` }))
+  }
+  const valid = form.name.trim().length >= 2 && (form.mode === 'autonomous' || (form.markets.length > 0 && form.skills.length > 0))
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault(); setError(''); setSaving(true)
+    try { await onCreate(form) }
+    catch (err) { setError(err instanceof Error ? err.message : 'Could not create student') }
+    finally { setSaving(false) }
+  }
+  return <div className="dialog-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
+    <section className="dialog" role="dialog" aria-modal="true" aria-labelledby="create-title">
+      <div className="dialog-head"><div><p className="eyebrow">ACADEMY / ENROLMENT</p><h2 id="create-title">Create new student</h2></div><button className="icon-button" onClick={onClose} aria-label="Close"><X size={19}/></button></div>
+      <form onSubmit={submit}>
+        <div className="dialog-scroll">
+          <div className="field-set"><label className="form-label" htmlFor="student-name">Student name</label>
+            <div className="name-input"><input id="student-name" placeholder="e.g. Orion" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} maxLength={40} autoFocus required /><button type="button" className="btn btn-secondary" onClick={generate}><Sparkles size={15}/> Generate</button></div>
+            <p className="field-help">Every student has its own permanent identity and separate history.</p>
+          </div>
+          <Selector form={form} onChange={v => setForm(v as StudentInput)}/>
+          <div className="research-notice"><ShieldCheck size={18}/><p><strong>Research only</strong><br/>Creating a student does not start trading or grant skill mastery. Training becomes available in a later sprint.</p></div>
+          {error && <p className="message-error" role="alert"><AlertCircle size={16}/> {error}</p>}
+        </div>
+        <div className="dialog-actions"><button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button><button type="submit" disabled={!valid || saving} className="btn btn-primary"><UserPlus size={16}/> {saving ? 'Creating…' : 'Create student'}</button></div>
+      </form>
+    </section>
+  </div>
+}
+function ChangePlan({ student, onClose, onSave }: { student: Student; onClose: () => void; onSave: (p: PlanInput) => Promise<void> }) {
+  const [form, setForm] = useState<PlanInput>({ mode: student.learning_plan.mode, markets: student.learning_plan.markets, skills: student.learning_plan.skills, reason: 'CEO updated learning direction' })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const valid = form.mode === 'autonomous' || (form.markets.length > 0 && form.skills.length > 0)
+  const submit = async (e: React.FormEvent) => { e.preventDefault(); setSaving(true); setError(''); try { await onSave(form) } catch (err) { setError(err instanceof Error ? err.message : 'Could not save plan') } finally { setSaving(false) } }
+  return <div className="dialog-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}><section className="dialog" role="dialog" aria-modal="true" aria-labelledby="direction-title">
+    <div className="dialog-head"><div><p className="eyebrow">{student.name} · PLAN V{student.learning_plan.version}</p><h2 id="direction-title">Change learning direction</h2></div><button onClick={onClose} className="icon-button" aria-label="Close"><X size={19}/></button></div>
+    <form onSubmit={submit}><div className="dialog-scroll"><Selector form={form} onChange={v => setForm(v)}/>
+      <div className="field-set"><label className="form-label" htmlFor="reason">Reason for change</label><textarea id="reason" rows={2} value={form.reason} onChange={e => setForm(p => ({ ...p, reason: e.target.value }))} maxLength={200}/></div>
+      <div className="research-notice"><BookMarked size={18}/><p>A new version of the plan will be recorded. Previous plans, student identity and history are preserved. No trading permissions change.</p></div>
+      {error && <p className="message-error" role="alert"><AlertCircle size={16}/> {error}</p>}</div>
+      <div className="dialog-actions"><button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={!valid || saving || !form.reason?.trim()}>{saving ? 'Saving…' : 'Save new plan'} <ArrowRight size={16}/></button></div>
+    </form>
+  </section></div>
+}
+function StudentProfile({ student, onBack, onEdit }: { student: Student; onBack: () => void; onEdit: () => void }) {
+  const [section, setSection] = useState<'overview' | 'skills' | 'memory' | 'exams'>('overview')
+  const history = student.plan_history ?? [student.learning_plan]
+  return <div className="page-enter">
+    <button className="back-link" onClick={onBack}><ArrowLeft size={16}/> All students</button>
+    <div className="profile-head"><div className="student-avatar student-avatar-lg">{student.name[0]?.toUpperCase()}</div><div className="profile-name"><p className="eyebrow">STUDENT / {shortId(student)}</p><h1>{student.name}</h1><div className="profile-meta"><ModePill mode={student.learning_plan.mode}/><span className="pill pill-muted">Awaiting research</span><span className="muted">Enrolled {friendlyDate(student.created_at)}</span></div></div><button className="btn btn-secondary" onClick={onEdit}><Settings2 size={17}/> Change direction</button></div>
+    <div className="profile-summary"><Sparkles size={20}/><div><strong>Academy briefing</strong><p>{student.name} has been enrolled with {student.learning_plan.mode === 'autonomous' ? 'an autonomous research plan. Academy will select learning targets when training is available.' : `a CEO-directed plan covering ${student.learning_plan.markets.join(', ')} and ${student.learning_plan.skills.map(titleCase).join(', ')}.`} Training has not started. Historical data and learning workers arrive in later sprints.</p></div></div>
+    <div className="section-tabs" role="tablist" aria-label="Student profile sections">{(['overview','skills','memory','exams'] as const).map(tab => <button key={tab} role="tab" aria-selected={section === tab} className={section === tab ? 'active' : ''} onClick={() => setSection(tab)}>{titleCase(tab)}</button>)}</div>
+    {section === 'overview' && <div className="two-columns"><section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">CURRENT DIRECTION</p><h3>Learning plan <span className="version">v{student.learning_plan.version}</span></h3></div><Target size={18}/></div><div className="panel-content"><div className="plan-row"><span>Mode</span><ModePill mode={student.learning_plan.mode}/></div><div className="plan-row"><span>Target markets</span><strong>{student.learning_plan.markets.length ? student.learning_plan.markets.join(', ') : 'Academy selected (future)'}</strong></div><div className="plan-row"><span>Target skills</span><strong>{student.learning_plan.skills.length ? student.learning_plan.skills.map(titleCase).join(', ') : 'Academy selected (future)'}</strong></div><div className="plan-row"><span>Qualification</span><strong>Not yet assessed</strong></div><button className="text-action" onClick={onEdit}>Adjust learning plan <ArrowRight size={15}/></button></div></section>
+      <section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">VERSION HISTORY</p><h3>Development record</h3></div><Clock3 size={18}/></div><div className="panel-content"><div className="timeline">{[...history].reverse().map((plan: LearningPlan) => <div key={plan.version} className="timeline-item"><div className="timeline-mark"/><div><strong>Learning plan v{plan.version}</strong><p>{plan.reason}</p><small>{friendlyDate(plan.created_at)} · {plan.mode === 'autonomous' ? 'Autonomous' : 'CEO-directed'}</small></div></div>)}</div></div></section></div>}
+    {section === 'skills' && <div className="surface empty-panel"><EmptyIcon icon={GraduationCap}/><h3>No mastery scores yet</h3><p>Target skills are not achievements. Mastery will be earned through evidence-backed training and independent examinations.</p>{student.learning_plan.skills.length > 0 && <div className="skill-chips static-chips">{student.learning_plan.skills.map(s => <span className="skill-chip" key={s}>{titleCase(s)} · Target</span>)}</div>}</div>}
+    {section === 'memory' && <div className="surface empty-panel"><EmptyIcon icon={BookOpen}/><h3>Memory archive awaiting training</h3><p>Good/Bad experiences, provenance and skill-linked examples will appear once verified historical research runs.</p></div>}
+    {section === 'exams' && <div className="surface empty-panel"><EmptyIcon icon={ClipboardList}/><h3>No examinations taken</h3><p>Students must earn qualifications from independent, leakage-checked evidence. No qualifications are granted at enrolment.</p></div>}
+  </div>
+}
+function Header({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
+  return <div className="page-header"><div><p className="eyebrow">CEO CONSOLE / {title.toUpperCase()}</p><h1>{title}</h1><p className="page-subtitle">{description}</p></div>{action && <div className="header-action">{action}</div>}</div>
+}
+function HomePage({ dashboard, onNew, onStudents }: { dashboard: Dashboard | null; onNew: () => void; onStudents: () => void }) {
+  const rows = [{ label: 'Enrolled students', value: dashboard ? NUM_FORMAT.format(dashboard.students_total) : '—', icon: Users, detail: 'Created AI identities' },
+    { label: 'Students training', value: dashboard ? NUM_FORMAT.format(dashboard.students_training) : '—', icon: GraduationCap, detail: 'Workers not enabled' },
+    { label: 'Qualified strategies', value: dashboard ? NUM_FORMAT.format(dashboard.research_qualified) : '—', icon: ShieldCheck, detail: 'Requires independent exams' },
+    { label: 'System status', value: dashboard ? 'Online' : '—', icon: Activity, detail: 'API connection status' }]
+  return <div className="page-enter"><Header title="Overview" description="Your research command centre. A clear view of what exists, what is learning and what needs your decision." action={<button className="btn btn-primary" onClick={onNew}><Plus size={17}/> New student</button>}/>
+    <div className="scope-banner"><span className="scope-dot"/><span><strong>Research environment</strong> · No market feed, broker account or trading permission is active.</span><span className="scope-stage">SPRINT 01</span></div>
+    <div className="metrics-grid">{rows.map(row => <div className="surface metric-card" key={row.label}><div className="metric-top"><span>{row.label}</span><row.icon size={19}/></div><strong>{row.value}</strong><small>{row.detail}</small></div>)}</div>
+    <div className="dashboard-grid"><section className="surface panel overview-main"><div className="panel-heading"><div><p className="eyebrow">FINANCIAL PERFORMANCE</p><h3>Trading overview</h3></div><span className="pill pill-muted"><ShieldOff size={13}/> Disabled</span></div><div className="scope-selector"><span>Historical</span><span>Paper</span><span>Live</span></div><div className="blank-chart"><BarChart3 size={30} strokeWidth={1.2}/><strong>No performance data yet</strong><p>Equity curves, realised net P&amp;L and trade journals require verified market data and a validated simulator.</p><small>Not zero profit. No financial results exist.</small></div></section>
+      <div className="dashboard-aside"><section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">ACTION CENTRE</p><h3>Needs attention</h3></div><span className="count-badge">{dashboard?.attention.length ?? 0}</span></div><div className="notice-list"><div className="notice-item"><div className="notice-icon"><Database size={17}/></div><div><strong>Historical data not connected</strong><p>Verified XAUUSD data onboarding belongs to Sprint 2.</p><span>Research prerequisites</span></div><ChevronRight size={16}/></div></div></section><section className="surface panel quick-panel"><div className="panel-heading"><div><p className="eyebrow">ACADEMY</p><h3>Start building your cohort</h3></div><Users size={19}/></div><div className="panel-content"><p className="muted">Give your students identities and choose their learning direction before data and training come online.</p><button className="btn btn-secondary btn-wide" onClick={onStudents}>Open student academy <ArrowRight size={16}/></button></div></section></div></div>
+    <div className="footer-note"><LockKeyhole size={14}/> No orders, positions, broker balances or live deployment controls are available in this sprint.</div>
+  </div>
+}
+function StudentsPage({ students, onNew, onOpen }: { students: Student[]; onNew: () => void; onOpen: (id: string) => void }) {
+  const [search, setSearch] = useState('')
+  const filtered = students.filter(s => s.name.toLowerCase().includes(search.toLowerCase()))
+  return <div className="page-enter"><Header title="Students" description="Independent identities. Individual histories. One academy." action={<button onClick={onNew} className="btn btn-primary"><UserPlus size={17}/> Create student</button>}/>
+    <div className="students-tools"><div className="search-wrap"><Search size={18}/><input placeholder="Search students…" value={search} onChange={e => setSearch(e.target.value)} aria-label="Search students"/></div><span className="results-count">{students.length} enrolled</span></div>
+    {!students.length && <div className="surface empty-panel student-empty"><EmptyIcon icon={Bot}/><p className="eyebrow">YOUR ACADEMY STARTS HERE</p><h2>No students yet.</h2><p>Create your first named AI student. Choose its learning direction now; verified training comes later.</p><button className="btn btn-primary" onClick={onNew}><Plus size={17}/> Create first student</button></div>}
+    {students.length > 0 && <div className="student-grid">{filtered.map(student => <button key={student.id} className="surface student-card" onClick={() => onOpen(student.id)}><div className="student-card-head"><div className="student-avatar">{student.name[0]?.toUpperCase()}</div><span className="pill pill-muted">Research pending</span></div><h3>{student.name}</h3><p className="student-serial">STUDENT {shortId(student)}</p><div className="student-card-divider"/><div className="student-card-detail"><span>Learning</span><ModePill mode={student.learning_plan.mode}/></div><div className="student-card-detail"><span>Plan version</span><strong>v{student.learning_plan.version}</strong></div><div className="student-card-detail"><span>Training</span><span className="muted">Not started</span></div><div className="student-card-footer">Open profile <ArrowRight size={16}/></div></button>)}{filtered.length === 0 && <div className="surface empty-panel"><p>No student matches “{search}”.</p></div>}</div>}
+    <section className="academy-bottom"><div className="academy-icon"><GraduationCap size={20}/></div><div><strong>A growing academy, not identical bots.</strong><p>Each student will gain independent memories, Strategy DNA, specialist skills and research qualifications. Collaborations and examinations are scheduled for later sprints.</p></div></section>
+  </div>
+}
+function TradingPage() {
+  const [scope, setScope] = useState<TradingMode>('historical')
+  const details: Record<TradingMode, { heading: string; intro: string; next: string }> = {
+    historical: { heading: 'Historical testing not yet available', intro: 'Historical execution will replay verified data with cost-aware fills and immutable journals.', next: 'Planned: Data Engine (S2) and Simulator (S3)' },
+    paper: { heading: 'Paper trading is disabled', intro: 'Paper operations require independently qualified models and explicit CEO authorisation.', next: 'Planned: Paper pilot (S11)' },
+    live: { heading: 'Live trading is disabled', intro: 'Real-money trading remains completely outside this programme until separate readiness checks and exact CEO approval.', next: 'Not scheduled in current sprints' },
+  }
+  return <div className="page-enter"><Header title="Trading" description="Historical, paper and live are completely separate. No artificial balances or trading activity."/>
+    <div className="trading-switch" role="tablist" aria-label="Trading environment">{(['historical','paper','live'] as const).map(m => <button key={m} role="tab" aria-selected={scope === m} className={scope === m ? 'active' : ''} onClick={() => setScope(m)}>{titleCase(m)} <span className="mode-disabled">OFFLINE</span></button>)}</div>
+    <div className="surface trading-placeholder"><div className="trading-disabled-icon"><ShieldOff size={29}/></div><span className="pill pill-muted">{scope.toUpperCase()} · NOT ENABLED</span><h2>{details[scope].heading}</h2><p>{details[scope].intro}</p><div className="coming-next"><Clock3 size={16}/>{details[scope].next}</div></div>
+    <div className="trading-bottom"><div className="surface small-status"><div className="small-status-top"><BarChart3 size={18}/><span>Equity &amp; net P&amp;L</span></div><strong>Not available</strong><small>No results have been generated</small></div><div className="surface small-status"><div className="small-status-top"><ClipboardList size={18}/><span>Trade journal</span></div><strong>Empty</strong><small>Independent journal comes with the simulator</small></div><div className="surface small-status"><div className="small-status-top"><ShieldCheck size={18}/><span>CEO permissions</span></div><strong>None granted</strong><small>No trading model deployed</small></div></div>
+  </div>
+}
+function App() {
+  const [ceo, setCeo] = useState<CEO | null>(null)
+  const [initialising, setInitialising] = useState(true)
+  const [tab, setTab] = useState<Tab>('home')
+  const [dashboard, setDashboard] = useState<Dashboard | null>(null)
+  const [students, setStudents] = useState<Student[]>([])
+  const [activeStudent, setActiveStudent] = useState<Student | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [banner, setBanner] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const [d, s] = await Promise.all([api<Dashboard>('/v1/dashboard'), api<Student[]>('/v1/students')])
+      setDashboard(d); setStudents(s)
+    } catch (err) {
+      if (err instanceof APIError && err.status === 401) { setCeo(null); setCsrf(null) }
+      else setError(err instanceof Error ? err.message : 'Connection failed')
+    } finally { setLoading(false) }
+  }, [])
+  useEffect(() => {
+    api<CEO>('/v1/auth/me').then(user => { setCeo(user); setCsrf(user.csrf_token) }).catch(() => { setCeo(null); setCsrf(null) }).finally(() => setInitialising(false))
+  }, [])
+  useEffect(() => { if (ceo) void refresh() }, [ceo, refresh])
+  const navigate = (next: Tab) => { setTab(next); setActiveStudent(null); setBanner('') }
+  const openStudent = async (id: string) => {
+    try { setActiveStudent(await api<Student>(`/v1/students/${id}`)); setBanner('') }
+    catch (err) { setError(err instanceof Error ? err.message : 'Could not load student') }
+  }
+  const createStudent = async (input: StudentInput) => {
+    const student = await api<Student>('/v1/students', 'POST', input)
+    setCreating(false); setTab('students'); await refresh(); await openStudent(student.id)
+    setBanner(`${student.name} enrolled successfully. Research will begin once market data and training are available.`)
+  }
+  const savePlan = async (plan: PlanInput) => {
+    if (!activeStudent) return
+    const updated = await api<Student>(`/v1/students/${activeStudent.id}/direction`, 'PATCH', plan)
+    setActiveStudent(updated); setEditing(false); await refresh(); setBanner(`Learning plan v${updated.learning_plan.version} saved. No trading permissions changed.`)
+  }
+  const logout = async () => {
+    try { await api('/v1/auth/logout', 'POST') } catch { /* local session cleared regardless */ }
+    setCsrf(null); setCeo(null); setStudents([]); setDashboard(null); setActiveStudent(null)
+  }
+  if (initialising) return <div className="boot"><span className="brand-symbol"><Layers3/></span><p>Loading your console…</p></div>
+  if (!ceo) return <Login onLogin={user => { setCeo(user); setTab('home'); setActiveStudent(null) }}/>
+  const nav: { id: Tab; label: string; icon: typeof Home }[] = [ { id: 'home', label: 'Home', icon: Home }, { id: 'students', label: 'Students', icon: Users }, { id: 'trading', label: 'Trading', icon: BarChart3 } ]
+  return <div className="app-shell">
+    <aside className="sidebar"><div className="brand"><span className="brand-symbol"><Layers3 size={19}/></span><span>AGENTIC<strong>TRADING</strong></span></div><div className="sidebar-section"><p className="eyebrow">WORKSPACE</p><nav aria-label="Main navigation">{nav.map(n => <button key={n.id} className={`sidebar-link ${tab === n.id ? 'active' : ''}`} onClick={() => navigate(n.id)}><n.icon size={18}/>{n.label}{tab === n.id && <span className="nav-indicator"/>}</button>)}</nav></div><div className="sidebar-spacer"/><div className="side-system"><span className="online-dot"/><span>Research workspace</span><small>Development / S1</small></div><button className="sidebar-user" onClick={logout} title="Sign out"><span className="user-avatar">CEO</span><span><strong>Chief Executive</strong><small>{ceo.email}</small></span><LogOut size={17}/></button></aside>
+    <div className="workspace"><header className="topbar"><div className="topbar-left"><span className="breadcrumb-brand">Agentic Trading</span><ChevronRight size={14}/><span>{tab === 'students' && activeStudent ? activeStudent.name : titleCase(tab)}</span></div><div className="topbar-right"><span className="environment-tag"><span className="online-dot"/> RESEARCH</span><button className="icon-button top-refresh" onClick={() => void refresh()} disabled={loading} title="Refresh data" aria-label="Refresh"><RefreshCw size={17} className={loading ? 'spin' : ''}/></button><span className="top-avatar">CEO</span></div></header>
+      <main className="main-content">
+        {error && <div className="message-error page-error" role="alert"><AlertCircle size={17}/>{error}<button onClick={() => setError('')} aria-label="Dismiss"><X size={16}/></button></div>}
+        {banner && <div className="message-success" role="status"><Check size={17}/>{banner}<button onClick={() => setBanner('')} aria-label="Dismiss"><X size={16}/></button></div>}
+        {tab === 'home' && <HomePage dashboard={dashboard} onNew={() => setCreating(true)} onStudents={() => navigate('students')}/>}
+        {tab === 'students' && (activeStudent ? <StudentProfile student={activeStudent} onBack={() => setActiveStudent(null)} onEdit={() => setEditing(true)}/> : <StudentsPage students={students} onNew={() => setCreating(true)} onOpen={id => void openStudent(id)}/>)}
+        {tab === 'trading' && <TradingPage/>}
+      </main>
+      <nav className="bottom-nav" aria-label="Mobile navigation">{nav.map(n => <button key={n.id} className={tab === n.id ? 'active' : ''} onClick={() => navigate(n.id)}><n.icon size={21} strokeWidth={tab === n.id ? 2.2 : 1.7}/><span>{n.label}</span></button>)}</nav>
+    </div>
+    {creating && <CreateStudent onClose={() => setCreating(false)} onCreate={createStudent}/>}
+    {editing && activeStudent && <ChangePlan student={activeStudent} onClose={() => setEditing(false)} onSave={savePlan}/>}
+  </div>
+}
+
+createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>)

@@ -1,5 +1,17 @@
-# Frontend — Sprint 1
+# CEO Console — Sprint 1
 
-Sprint 0 contains navigation contracts only. Sprint 1 builds a React + TypeScript mobile-first interface with three main tabs: Home, Students and Trading.
+React 19 + TypeScript + Vite. Three responsive tabs (Home / Students / Trading), server-authenticated CEO login, student enrolment, direction changes and versioned profile history. **All performance/trading placeholders explicitly say disabled or unavailable, never imply profit.**
 
-Do not show fictional money or unrealised systems as real performance. Authentication, CEO controls and named-student creation must be implemented with backend enforcement.
+## Run locally
+
+Start and initialise the backend as explained in the root README, then:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://127.0.0.1:5173 . Vite proxies `/v1` and `/health` to `http://127.0.0.1:8000`; the signed HttpOnly CEO session cookie remains same-origin in the browser. Nothing in the frontend stores passwords, cookies, or tokens in localStorage.
+
+`npm run build` runs TypeScript strict checking and produces `dist/`. A production release must configure an HTTPS same-origin API, server-side secrets, approved origins, database migrations, backups, audit retention, and distributed login throttling. **Do not expose the development server publicly.**
