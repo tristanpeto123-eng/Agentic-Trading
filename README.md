@@ -14,9 +14,7 @@ source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
 pip install -e './backend[dev]'
 
 # Set DATABASE_URL and SESSION_SECRET for the current shell (or use dev defaults).
-cd backend
-alembic -c alembic.ini upgrade head
-cd ..
+alembic -c backend/alembic.ini upgrade head
 
 # First-time only; enter a 12+ character CEO password interactively (not in code or CLI args).
 python -m agentic_trading.bootstrap_ceo --email you@example.com
@@ -31,7 +29,7 @@ npm install
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173** in your browser and log in using the CEO credentials you created. The backend is reached through the Vite proxy so the HttpOnly signed cookie stays same-origin. Database URL defaults to a local SQLite file, **relative to the process working directory**; run migrations, bootstrap and API using the same directory or set an absolute `DATABASE_URL`.
+Open **http://127.0.0.1:5173** in your browser and log in using the CEO credentials you created. The backend is reached through the Vite proxy so the HttpOnly signed cookie stays same-origin. Database URL defaults to a local SQLite file **relative to the process working directory**. The commands above all run from the repository root. For hosted deployments, configure an absolute database URL consistently for migration, bootstrap and API startup.
 
 Run checks:
 
