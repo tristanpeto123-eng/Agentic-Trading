@@ -4,13 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentic-trading"
-version = "0.0.1"
-description = "Agentic Trading foundational API (Sprint 0)"
+version = "0.1.0"
+description = "Agentic Trading CEO and student foundation (Sprint 1)"
 requires-python = ">=3.11"
-dependencies = ["fastapi>=0.115,<1", "pydantic>=2.9,<3", "uvicorn>=0.30,<1"]
+dependencies = ["fastapi>=0.115,<1", "pydantic>=2.9,<3", "uvicorn>=0.30,<1", "sqlalchemy>=2.0,<3", "argon2-cffi>=23,<26", "itsdangerous>=2.2,<3", "alembic>=1.13,<2"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "httpx>=0.27,<1"]
+postgres = ["psycopg[binary]>=3.2,<4"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

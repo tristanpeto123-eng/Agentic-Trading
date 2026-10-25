@@ -1,1 +1,2 @@
-"""Independent Agentic Trading research foundation. No execution endpoints."""
+"""Agentic Trading, independent research-first platform."""
+__version__ = "0.1.0"
