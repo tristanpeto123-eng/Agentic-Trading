@@ -43,7 +43,8 @@ costs = ReplayCosts(commission_usd_per_oz_per_side=Decimal('0.05'),
                     starting_equity_usd=Decimal('1000'), max_position_oz=Decimal('10'),
                     max_risk_fraction=Decimal('0.05'), max_leverage=Decimal('2'), max_holding_minutes=3)
 report = historical_research_replay(trace, window, bars, costs,
-                                    as_of=bars[-1].open_time + timedelta(minutes=1))
+                                    as_of=bars[-1].open_time + timedelta(minutes=1),
+                                    execution_source_sha256='c'*64)
 print('SYNTHETIC / OFFLINE RESEARCH ONLY / NOT PROFITABILITY EVIDENCE')
 print(json.dumps({'regime': trace.regime.market.value,
                   'volatility': trace.regime.volatility.value,

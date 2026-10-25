@@ -10,7 +10,7 @@
 4. **Strategist B (final)** abstains if model/data are missing or expected net R is below policy. Changing any proposal field requires a new content digest, assessment and Guardian review.
 5. **Guardian (mandatory)** checks proposal/assessment binding, timestamps, regime confidence, expected net R, loss budget, position size and leverage. It returns an auditable APPROVED/DENIED *historical research intent*; it never creates paper/live authorisation. True live spread can only be checked against M1 bid/ask quotes during replay; M15 mid-price inference cannot verify executable spread.
 6. **Guardian thesis monitor A** emits VALID, WEAKENING, INVALIDATED or UNCERTAIN *observations only*; it has no exit or order authority.
-7. **Historical simulator integration** converts only a valid Guardian-approved research trace into an S3 historical order. The execution tape must start after the decision time. An unresolved trade remains unresolved, and all results are non-qualifying, even if the caller self-labels the dataset verified.
+7. **Historical simulator integration** converts only a valid Guardian-approved research trace into an S3 historical order. The execution tape must start after the decision time and carry a distinct M1 source-artifact SHA-256; signal and execution source hashes are never conflated. An unresolved trade remains unresolved, and all results are non-qualifying, even if the caller self-labels the dataset verified.
 
 ## Data/time requirements
 

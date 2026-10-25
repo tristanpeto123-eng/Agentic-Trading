@@ -181,10 +181,10 @@ def test_synthetic_trade_flows_to_s3_engine_and_stays_unqualified():
     px=d.candidate.entry_reference
     bars=(quote_bar(start,px), quote_bar(start+timedelta(minutes=1),px),
           quote_bar(start+timedelta(minutes=2),px))
-    result=historical_research_replay(d,w,bars,costs(),as_of=start+timedelta(minutes=3))
+    result=historical_research_replay(d,w,bars,costs(),as_of=start+timedelta(minutes=3),execution_source_sha256='c'*64)
     assert len(result.trades)==1
     assert not result.qualification_eligible and result.evidence_kind==EvidenceKind.SYNTHETIC
-    assert result.journal_sha256 == historical_research_replay(d,w,bars,costs(),as_of=start+timedelta(minutes=3)).journal_sha256
+    assert result.journal_sha256 == historical_research_replay(d,w,bars,costs(),as_of=start+timedelta(minutes=3),execution_source_sha256='c'*64).journal_sha256
 
 
 def test_replay_rejects_missing_approval_or_mismatched_source():
@@ -192,12 +192,12 @@ def test_replay_rejects_missing_approval_or_mismatched_source():
     d=research_decision(w,STUDENT,None)
     with pytest.raises(IntelligenceError,match='No Guardian-approved'):
         historical_research_replay(d,w,(quote_bar(w.as_of+timedelta(minutes=1)),),costs(),
-                                   as_of=w.as_of+timedelta(minutes=2))
+                                   as_of=w.as_of+timedelta(minutes=2),execution_source_sha256='c'*64)
     approved=research_decision(w,STUDENT,calibrator(w))
-    wrong=w.model_copy(update={'source_sha256':'c'*64})
+    wrong=w.model_copy(update={'source_sha256':'d'*64})
     with pytest.raises(IntelligenceError,match='immutable signal window'):
         historical_research_replay(approved,wrong,(quote_bar(w.as_of+timedelta(minutes=1)),),costs(),
-                                   as_of=w.as_of+timedelta(minutes=2))
+                                   as_of=w.as_of+timedelta(minutes=2),execution_source_sha256='c'*64)
 
 
 def test_unsafe_volatility_abstains_without_proposals():
@@ -262,10 +262,10 @@ def test_replay_rejects_trace_mutation_and_same_instant_m1():
     manipulated=d.model_copy(update={'reason':'FAKE'})
     with pytest.raises(IntelligenceError,match='trace was modified'):
         historical_research_replay(manipulated,w,(quote_bar(w.as_of+timedelta(minutes=1)),),
-                                   costs(),as_of=w.as_of+timedelta(minutes=2))
+                                   costs(),as_of=w.as_of+timedelta(minutes=2),execution_source_sha256='c'*64)
     with pytest.raises(IntelligenceError,match='start after'):
         historical_research_replay(d,w,(quote_bar(w.as_of),quote_bar(w.as_of+timedelta(minutes=1))),
-                                   costs(),as_of=w.as_of+timedelta(minutes=2))
+                                   costs(),as_of=w.as_of+timedelta(minutes=2),execution_source_sha256='c'*64)
 
 
 def test_no_learned_neural_models_or_qualifying_claims():
@@ -274,3 +274,11 @@ def test_no_learned_neural_models_or_qualifying_claims():
     assert d.regime.engine_kind=='DETERMINISTIC_BASELINE'
     assert d.assessment.schema_version=='trade_assessment.v1'
     assert d.candidate.strategy_version=='strategist_b.baseline.v1'
+
+
+def test_execution_tape_provenance_must_be_distinct_from_signal_source():
+    w=window(); d=research_decision(w,STUDENT,calibrator(w))
+    with pytest.raises(IntelligenceError,match='separately identifiable'):
+        historical_research_replay(d,w,(quote_bar(w.as_of+timedelta(minutes=1)),),
+                                   costs(),as_of=w.as_of+timedelta(minutes=2),
+                                   execution_source_sha256=w.source_sha256)

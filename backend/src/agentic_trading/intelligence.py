@@ -8,7 +8,7 @@ No API, order routing, credentials, or approval mutation is exposed here.
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_DOWN
 from enum import StrEnum
 from hashlib import sha256
 import json
@@ -396,7 +396,7 @@ def guardian_a(proposal: TradeProposal, assessment: TradeAssessment, regime: Reg
         risk_size = loss_budget / loss_per_oz
         leverage_size = cfg.equity_usd * cfg.max_leverage / (proposal.entry_reference + cfg.slippage_usd_per_oz_per_side)
         size = min(risk_size, leverage_size, cfg.max_position_oz)
-        size = size.quantize(Decimal('0.0001')) if size >= Decimal('0.0001') else ZERO
+        size = size.quantize(Decimal('0.0001'), rounding=ROUND_DOWN) if size >= Decimal('0.0001') else ZERO
         if size <= ZERO:
             reasons.append('NO_SAFE_POSITION_SIZE')
     decision = GuardianDecision(proposal_id=proposal.proposal_id, proposal_revision=proposal.revision,
@@ -504,10 +504,12 @@ def trace_digest(trace: DecisionTrace) -> str:
 
 def historical_research_replay(trace: DecisionTrace, window: MarketWindow,
                                bars: tuple[QuoteBar, ...], costs: ReplayCosts,
-                               as_of: datetime) -> ReplayReport:
+                               as_of: datetime, execution_source_sha256: Sha256) -> ReplayReport:
     """Optional S3 integration; never creates or routes broker orders."""
     if not trace.selected or not trace.candidate or not trace.assessment or not trace.guardian:
         raise IntelligenceError('No Guardian-approved historical research intent')
+    if execution_source_sha256 == window.source_sha256:
+        raise IntelligenceError('Signal and M1 execution archives require separately identifiable source artifacts')
     if trace.trace_sha256 != trace_digest(trace):
         raise IntelligenceError('Historical decision trace was modified after decision')
     if trace.observed_at != window.as_of or trace.source_sha256 != window.source_sha256 or (
@@ -524,4 +526,4 @@ def historical_research_replay(trace: DecisionTrace, window: MarketWindow,
     order = HistoricalOrder(proposal=trace.candidate, assessment=trace.assessment,
                             guardian=trace.guardian.decision, quantity_oz=trace.guardian.quantity_oz)
     return replay(bars=bars, orders=(order,), costs=costs,
-                  evidence_kind=trace.evidence_kind, source_sha256=trace.source_sha256, as_of=as_of)
+                  evidence_kind=trace.evidence_kind, source_sha256=execution_source_sha256, as_of=as_of)
