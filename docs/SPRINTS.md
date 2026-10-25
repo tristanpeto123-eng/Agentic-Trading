@@ -5,7 +5,7 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 | Sprint | Deliverable | Status |
 |---|---|---|
 | S0 | Repo skeleton, contracts, policy tests, docs, provider shortlist, UX wireframes | **Completed — published, verified in GitHub** |
-| S1 | Login, CEO role, student creation, persistent plans, main shell | **Implementation complete locally, GH CI/UX gate pending** |
+| S1 | Login, CEO role, student creation, persistent plans, main shell | **Verified development foundation — PR review pending, not deployed** |
 | S2 | Verified XAUUSD Data Engine | Not started |
 | S3 | Historical execution simulator | Not started |
 | S4 | Scout A/B, Strategist B, Guardian A | Not started |
