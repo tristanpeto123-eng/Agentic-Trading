@@ -76,3 +76,16 @@ all imported CSV files remain quarantined. See `docs/DATA_IMPORT.md`.
 ## Sprint 3 — historical replay research engine (review branch)
 
 The optional `agentic_trading.simulator` module replays guarded XAUUSD research instructions against **genuine bid/ask M1-shaped inputs**; its included fixtures are explicitly synthetic. It models spread, two commissions, adverse slippage, stop/target conservatism, gap losses, expiry, missing data, risk limits, immutable ledger records and reproducible fingerprints. No browser/API trading endpoint has been added. To see a synthetic-only smoke demonstration, run `python scripts/demo_historical_replay.py`. Read [Replay Rules](docs/HISTORICAL_REPLAY.md) and [Sprint 3 Review](docs/SPRINT3_CHECK.md). The S2 provenance gate remains open and no unverified import is permitted to qualify a student.
+
+
+## Sprint 4 — offline intelligence pipeline (review branch)
+
+`agentic_trading.intelligence` adds deterministic Scout A regime analysis,
+Strategist B trend/breakout/range proposals, empirical closed-trade Scout B scoring,
+mandatory Guardian research-only risk vetos and observation-only thesis monitoring.
+The optional handoff to Sprint 3 accepts Guardian-approved **historical research**
+intents; there are no broker, paper/live or student qualification endpoints.
+Neither Scout A nor Scout B is a trained neural model yet (see S6).
+Run `python scripts/demo_research_intelligence.py` for **synthetic-only** output.
+Read [Intelligence Rules](docs/TRADING_INTELLIGENCE.md) and
+[Sprint 4 Checker Report](docs/SPRINT4_CHECK.md).

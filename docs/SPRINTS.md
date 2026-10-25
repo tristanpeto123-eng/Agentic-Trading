@@ -8,7 +8,7 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 | S1 | Login, CEO role, student creation, persistent plans, main shell | **Completed — CEO approved, merged into main** |
 | S2 | XAUUSD historical data ingestion, quality & time-safe context | **Implementation in review; provider/rights gate pending** |
 | S3 | Historical execution simulator | **Fixture engine implemented, awaiting CI & independent data/source integration** |
-| S4 | Scout A/B, Strategist B, Guardian A | Not started |
+| S4 | Scout A/B, Strategist B, Guardian A | **Offline deterministic baseline implemented; under review; source gate open** |
 | S5 | Skill/memory engine | Not started |
 | S6 | Neural training and checkpoints | Not started |
 | S7 | Independent Examiner | Not started |
@@ -57,3 +57,13 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 **Check:** Unit/regression scenarios, GitHub backend/frontend/mobile CI and source-integrity gate tracked in `docs/SPRINT3_CHECK.md`.
 
 **Act:** Connect verified S2 data and S4 decision generation only after separate safety gates. Do not equate synthetic fixture profits with investable evidence or start paper trading.
+
+## Sprint 4 — PDCA
+
+**Plan:** Point-in-time historical Scout A -> candidate Strategist -> empirical Scout B -> final Strategist -> Guardian veto; no live operations.
+
+**Do:** Typed M15 windows, completed H1/H4 regime analysis, deterministic proposals and trace hashes, closed-net-R conditional evaluation, Guardian risk guard, thesis-only observations and S3 replay bridge.
+
+**Check:** Local regression scenarios, GitHub CI, no data leakage or promotion; see `docs/SPRINT4_CHECK.md`.
+
+**Act:** Use truly independently verified historical data and separate train/test artifacts before making profitability claims; train actual models only in S6.
