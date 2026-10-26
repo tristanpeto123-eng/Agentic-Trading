@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Activity, ArrowLeft, ArrowRight, BarChart3, BookOpen, Bot, Check, ChevronRight, ClipboardList, Database, GraduationCap, Home, Layers3, LockKeyhole, LogOut, Plus, RefreshCw, ShieldCheck, ShieldOff, Sparkles, UserPlus, Users, X, AlertCircle, Settings2, BookMarked, Search, Target, Clock3, FileUp, FileCheck2 } from 'lucide-react'
 import { api, APIError, MARKETS, SKILLS, setCsrf } from './api'
-import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, PlanInput, Skill, Student, StudentInput, StudentSkillProgress, StudentMemory, Tab, TradingMode } from './api'
+import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, PlanInput, Skill, Student, StudentInput, StudentSkillProgress, StudentMemory, StudentTrainingHistory, Tab, TradingMode } from './api'
 import './styles.css'
 
 const NUM_FORMAT = new Intl.NumberFormat('en-GB')
@@ -203,18 +203,59 @@ function ProfileMemoryPane({ student }: { student: Student }) {
     </div>
   </section>
 }
+function TrainingCurve({ metrics }: { metrics: { epoch: number; train_loss: number; development_loss: number }[] }) {
+  if (!metrics.length) return null
+  const width = 620, height = 160, pad = 16
+  const all = metrics.flatMap(m => [m.train_loss, m.development_loss]).filter(Number.isFinite)
+  const lo = Math.min(...all), hi = Math.max(...all)
+  const range = Math.max(0.01, hi - lo)
+  const point = (m: { epoch: number; train_loss: number; development_loss: number }, i: number, field: 'train_loss' | 'development_loss') => {
+    const x = pad + (metrics.length === 1 ? 0 : i * (width - 2 * pad) / (metrics.length - 1))
+    const y = height - pad - (m[field] - lo) * (height - 2 * pad) / range
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }
+  return <div className="training-graph"><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Training and development loss by epoch" preserveAspectRatio="none">
+    <polyline points={metrics.map((m,i) => point(m,i,'train_loss')).join(' ')} fill="none" stroke="#58bfd3" strokeWidth="3"/>
+    <polyline points={metrics.map((m,i) => point(m,i,'development_loss')).join(' ')} fill="none" stroke="#e0b270" strokeWidth="3"/>
+  </svg><div className="training-legend"><span>● Training loss</span><span>● Development loss</span></div></div>
+}
+function ProfileTrainingPane({ student }: { student: Student }) {
+  const [data, setData] = useState<StudentTrainingHistory | null>(null)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    let active = true
+    setData(null); setError('')
+    void api<StudentTrainingHistory>(`/v1/students/${student.id}/training`)
+      .then(value => { if (active) setData(value) })
+      .catch(err => { if (active) setError(err instanceof Error ? err.message : 'Unable to load training history') })
+    return () => { active = false }
+  }, [student.id])
+  if (error) return <div className="surface empty-panel"><p role="alert" className="message-error">{error}</p></div>
+  if (!data) return <div className="surface empty-panel">Loading training history…</div>
+  return <section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">ACADEMY / NEURAL RESEARCH</p><h3>Training history</h3></div><Activity size={19}/></div><div className="panel-content">
+    <p className="skills-disclaimer">Model losses are research diagnostics, not profitability, skill mastery or independent examination. Automatic training remains disabled.</p>
+    {data.runs.length === 0 ? <div className="dataset-empty"><BookOpen size={19}/><span>No neural training runs recorded yet. Offline research training requires closed, eligible training memories.</span></div>
+      : <div className="skill-progress-list">{data.runs.map(run => <div className="skill-progress-row" key={run.run_id}>
+          <div className="skill-progress-head"><strong>{run.config.market} · {titleCase(run.config.tactic)}</strong><span className="pill pill-muted">Research only</span></div>
+          <div className="skill-progress-meta"><span>Epoch {run.epoch} / {run.config.epochs}</span><span>Plan v{run.config.plan_version} · Unqualified</span></div>
+          <TrainingCurve metrics={run.metrics}/>
+          <div className="skill-progress-meta"><span>Snapshot {run.snapshot_sha256.slice(0,12)}…</span><span>Not examined</span></div>
+        </div>)}</div>}
+  </div></section>
+}
 function StudentProfile({ student, onBack, onEdit }: { student: Student; onBack: () => void; onEdit: () => void }) {
-  const [section, setSection] = useState<'overview' | 'skills' | 'memory' | 'exams'>('overview')
+  const [section, setSection] = useState<'overview' | 'skills' | 'memory' | 'training' | 'exams'>('overview')
   const history = student.plan_history ?? [student.learning_plan]
   return <div className="page-enter">
     <button className="back-link" onClick={onBack}><ArrowLeft size={16}/> All students</button>
     <div className="profile-head"><div className="student-avatar student-avatar-lg">{student.name[0]?.toUpperCase()}</div><div className="profile-name"><p className="eyebrow">STUDENT / {shortId(student)}</p><h1>{student.name}</h1><div className="profile-meta"><ModePill mode={student.learning_plan.mode}/><span className="pill pill-muted">Awaiting research</span><span className="muted">Enrolled {friendlyDate(student.created_at)}</span></div></div><button className="btn btn-secondary" onClick={onEdit}><Settings2 size={17}/> Change direction</button></div>
-    <div className="profile-summary"><Sparkles size={20}/><div><strong>Academy briefing</strong><p>{student.name} has been enrolled with {student.learning_plan.mode === 'autonomous' ? 'an autonomous research plan. Academy will select learning targets when training is available.' : `a CEO-directed plan covering ${student.learning_plan.markets.join(', ')} and ${student.learning_plan.skills.map(titleCase).join(', ')}.`} Training has not started. Historical data and learning workers arrive in later sprints.</p></div></div>
-    <div className="section-tabs" role="tablist" aria-label="Student profile sections">{(['overview','skills','memory','exams'] as const).map(tab => <button key={tab} role="tab" aria-selected={section === tab} className={section === tab ? 'active' : ''} onClick={() => setSection(tab)}>{titleCase(tab)}</button>)}</div>
+    <div className="profile-summary"><Sparkles size={20}/><div><strong>Academy briefing</strong><p>{student.name} has been enrolled with {student.learning_plan.mode === 'autonomous' ? 'an autonomous research plan. Academy will select learning targets when training is available.' : `a CEO-directed plan covering ${student.learning_plan.markets.join(', ')} and ${student.learning_plan.skills.map(titleCase).join(', ')}.`} Automatic training has not started. Neural research runs are currently offline-only and require archived closed training examples.</p></div></div>
+    <div className="section-tabs" role="tablist" aria-label="Student profile sections">{(['overview','skills','memory','training','exams'] as const).map(tab => <button key={tab} role="tab" aria-selected={section === tab} className={section === tab ? 'active' : ''} onClick={() => setSection(tab)}>{titleCase(tab)}</button>)}</div>
     {section === 'overview' && <div className="two-columns"><section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">CURRENT DIRECTION</p><h3>Learning plan <span className="version">v{student.learning_plan.version}</span></h3></div><Target size={18}/></div><div className="panel-content"><div className="plan-row"><span>Mode</span><ModePill mode={student.learning_plan.mode}/></div><div className="plan-row"><span>Target markets</span><strong>{student.learning_plan.markets.length ? student.learning_plan.markets.join(', ') : 'Academy selected (future)'}</strong></div><div className="plan-row"><span>Target skills</span><strong>{student.learning_plan.skills.length ? student.learning_plan.skills.map(titleCase).join(', ') : 'Academy selected (future)'}</strong></div><div className="plan-row"><span>Qualification</span><strong>Not yet assessed</strong></div><button className="text-action" onClick={onEdit}>Adjust learning plan <ArrowRight size={15}/></button></div></section>
       <section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">VERSION HISTORY</p><h3>Development record</h3></div><Clock3 size={18}/></div><div className="panel-content"><div className="timeline">{[...history].reverse().map((plan: LearningPlan) => <div key={plan.version} className="timeline-item"><div className="timeline-mark"/><div><strong>Learning plan v{plan.version}</strong><p>{plan.reason}</p><small>{friendlyDate(plan.created_at)} · {plan.mode === 'autonomous' ? 'Autonomous' : 'CEO-directed'}</small></div></div>)}</div></div></section></div>}
     {section === 'skills' && <ProfileSkillsPane student={student}/>}
     {section === 'memory' && <ProfileMemoryPane student={student}/>}
+    {section === 'training' && <ProfileTrainingPane student={student}/>}
     {section === 'exams' && <div className="surface empty-panel"><EmptyIcon icon={ClipboardList}/><h3>No examinations taken</h3><p>Students must earn qualifications from independent, leakage-checked evidence. No qualifications are granted at enrolment.</p></div>}
   </div>
 }

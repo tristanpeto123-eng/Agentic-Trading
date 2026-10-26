@@ -77,3 +77,13 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 **Check:** 89 local backend tests passed; GitHub frontend + mobile pending. See `docs/SPRINT5_CHECK.md`.
 
 **Act:** Use only independently verified and partitioned market sources in later Exam/learning workflows. No paper/live trading or skill promotion from S5 archive.
+
+## Sprint 6 — PDCA
+
+**Plan:** Per-student neural research baseline with immutable training snapshots, chronological development split, complete-only time-safe S5 memories and deterministic restartable checkpoints.
+
+**Do:** PyTorch CPU MLP, bounded offline CLI worker, safe pickle-free `.npz` weight artifacts, SQL migrations, authenticated read-only training-history API and student learning-loss graph.
+
+**Check:** Pytest S0–S6 suite; migration upgrade; same-input reproducibility, resume, integrity tamper and model-data leakage tests; GitHub backend/frontend/mobile checks. See `docs/SPRINT6_CHECK.md`.
+
+**Act:** Harden for real verified datasets and independent Examiner (S7), then automate bounded student training with leases (S8). No paper/live activation from research results.

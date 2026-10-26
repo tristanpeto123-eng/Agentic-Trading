@@ -24,6 +24,7 @@ from agentic_trading.schemas import (
     StudentResponse, name_key,
 )
 from agentic_trading.skills_memory import catalog_manifest, read_student_memory, student_skill_progress, MemoryError
+from agentic_trading.neural_training import student_training_runs, TrainingError
 from agentic_trading.settings import Settings
 from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, new_session_factory
 
@@ -104,18 +105,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @api.get("/health")
     def health():
-        return {"status": "ok", "component": "api", "sprint": "S5"}
+        return {"status": "ok", "component": "api", "sprint": "S6"}
 
     @api.get("/v1/capabilities")
     def capabilities():
         return {
-            "name": "Agentic Trading", "stage": "sprint_5_skills_memory",
+            "name": "Agentic Trading", "stage": "sprint_6_neural_training",
             "research_training_enabled": False, "historical_execution_enabled": False,
             "paper_trading_enabled": False, "live_trading_enabled": False,
             "broker_connected": False, "student_creation_enabled": True,
             "historical_data_import_enabled": True, "research_data_qualified": False,
             "skills_catalog_enabled": True, "episodic_memory_read_enabled": True,
             "independent_skill_mastery_enabled": False, "automatic_memory_ingest_enabled": False,
+            "offline_neural_research_training_available": True, "automatic_training_enabled": False,
+            "independent_examiner_enabled": False,
         }
 
     @api.post("/v1/auth/login")
@@ -256,6 +259,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "qualification": "unqualified", "note": "Research archive only; not independent mastery or profitability evidence."}
         except (MemoryError, ValueError) as exc:
             raise HTTPException(status_code=409, detail=f"Memory integrity check failed: {exc}") from exc
+
+    @api.get("/v1/students/{student_id}/training")
+    def training_history(student_id: str, limit: int = 20, _: tuple[CEO, dict] = Depends(current_ceo),
+                         session: Session = Depends(db)):
+        get_student_or_404(student_id, session)
+        if not 1 <= limit <= 100:
+            raise HTTPException(status_code=422, detail="limit must be between 1 and 100")
+        try:
+            return {"student_id": student_id, "runs": student_training_runs(session, student_id, limit=limit),
+                    "qualification": "unqualified", "automatic_training_enabled": False,
+                    "note": "Offline neural research only; development loss is not independent proof."}
+        except TrainingError as exc:
+            raise HTTPException(status_code=409, detail=f"Training integrity check failed: {exc}") from exc
 
     @api.get("/v1/students", response_model=list[StudentResponse])
     def students(_: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):

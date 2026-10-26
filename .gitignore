@@ -31,3 +31,8 @@ frontend/screenshots/
 # S2 provider datasets, immutable raw source files and parsed market history
 data_store/
 data/
+
+# S6 immutable neural research checkpoint weights (never in public Git)
+*.npz
+model_store/
+training_artifacts/

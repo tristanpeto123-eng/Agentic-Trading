@@ -35,6 +35,16 @@ export type MemoryEpisode = {
   content_sha256: string
 }
 export type StudentMemory = { student_id: string; episodes: MemoryEpisode[]; qualification: 'unqualified'; note: string }
+export type TrainingMetrics = { epoch: number; train_loss: number; development_loss: number }
+export type StudentTrainingRun = {
+  run_id: string; student_id: string; state: 'research_only'; qualification: 'unqualified'
+  config: { market: Market; tactic: string; plan_version: number; epochs: number; as_of: string }
+  epoch: number; metrics: TrainingMetrics[]; research_eligible: false; snapshot_sha256: string
+}
+export type StudentTrainingHistory = {
+  student_id: string; runs: StudentTrainingRun[]; qualification: 'unqualified'
+  automatic_training_enabled: false; note: string
+}
 export type CEO = { email: string; role: 'ceo'; csrf_token: string }
 export type Dashboard = {
   students_total: number; students_training: number; research_qualified: number; historical_datasets_total: number
