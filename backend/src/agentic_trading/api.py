@@ -26,6 +26,7 @@ from agentic_trading.schemas import (
 from agentic_trading.skills_memory import catalog_manifest, read_student_memory, student_skill_progress, MemoryError
 from agentic_trading.neural_training import student_training_runs, TrainingError
 from agentic_trading.examiner import student_exam_history, ExaminationError
+from agentic_trading.academy import lesson_plan, student_jobs, AcademyError
 from agentic_trading.settings import Settings
 from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, new_session_factory
 
@@ -106,12 +107,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @api.get("/health")
     def health():
-        return {"status": "ok", "component": "api", "sprint": "S7"}
+        return {"status": "ok", "component": "api", "sprint": "S8"}
 
     @api.get("/v1/capabilities")
     def capabilities():
         return {
-            "name": "Agentic Trading", "stage": "sprint_7_examiner",
+            "name": "Agentic Trading", "stage": "sprint_8_academy",
             "research_training_enabled": False, "historical_execution_enabled": False,
             "paper_trading_enabled": False, "live_trading_enabled": False,
             "broker_connected": False, "student_creation_enabled": True,
@@ -120,7 +121,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "independent_skill_mastery_enabled": False, "automatic_memory_ingest_enabled": False,
             "offline_neural_research_training_available": True, "automatic_training_enabled": False,
             "independent_examiner_enabled": False,
-            "offline_research_examiner_available": True, "independent_examination_qualification_enabled": False,
+            "offline_research_examiner_available": True, "academy_scheduler_available": True, "independent_examination_qualification_enabled": False,
         }
 
     @api.post("/v1/auth/login")
@@ -287,6 +288,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "note": "Independent offline research comparisons are provisional. Dataset rights and holdout independence are not certified."}
         except ExaminationError as exc:
             raise HTTPException(status_code=409, detail=f"Exam integrity check failed: {exc}") from exc
+
+    @api.get("/v1/students/{student_id}/academy")
+    def academy_status(student_id: str, _: tuple[CEO, dict] = Depends(current_ceo),
+                       session: Session = Depends(db)):
+        get_student_or_404(student_id, session)
+        try:
+            return {"curriculum": lesson_plan(session, student_id),
+                    "jobs": student_jobs(session, student_id),
+                    "autonomous_training_enabled": False,
+                    "qualification": "unqualified",
+                    "note": "Bounded offline research jobs only. Verified market data is unavailable."}
+        except AcademyError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @api.get("/v1/students", response_model=list[StudentResponse])
     def students(_: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):

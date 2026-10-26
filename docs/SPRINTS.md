@@ -97,3 +97,13 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 **Check:** Backend regression, provenance/leakage/tamper/good-but-unqualified fixture tests; GitHub backend/frontend/mobile CI. See `docs/SPRINT7_CHECK.md`.
 
 **Act:** Unlock only with independently verified data, sealed holdouts, independent reproduction, multiple-trial safeguards and future Registrar. No research promotion or paper/live activation in S7.
+
+## Sprint 8 — PDCA (research foundation)
+
+**Plan:** Persist Academy curricula, independent lesson direction and recoverable research jobs without granting trading authority.
+
+**Do:** Student curriculum, idempotent work queue, leases, retry bounds, versioned plans and offline fixture-only learning worker.
+
+**Check:** S0–S8 pytest suite and migration through `0006_s8`, plus GitHub CI and source-rights gate.
+
+**Act:** Keep verified-data training and exam automation disabled until an independently licensed, auditable historical data provider is available. See `docs/SPRINT8_CHECK.md`.
