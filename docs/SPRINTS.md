@@ -4,18 +4,20 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 
 | Sprint | Deliverable | Status |
 |---|---|---|
-| S0 | Repo skeleton, contracts, policy tests, docs, provider shortlist, UX wireframes | **Completed — published, verified in GitHub** |
-| S1 | Login, CEO role, student creation, persistent plans, main shell | **Completed — CEO approved, merged into main** |
-| S2 | XAUUSD historical data ingestion, quality & time-safe context | **Implementation in review; provider/rights gate pending** |
-| S3 | Historical execution simulator | **Fixture engine implemented, awaiting CI & independent data/source integration** |
-| S4 | Scout A/B, Strategist B, Guardian A | **Offline deterministic baseline implemented; under review; source gate open** |
-| S5 | Skill/memory engine | **Locally verified (90 tests); pending CI / PR review** |
-| S6 | Neural training and checkpoints | Not started |
-| S7 | Independent Examiner | Not started |
-| S8 | Autonomous Academy | Not started |
-| S9 | Evolution, peer teaching, mentorship | Not started |
-| S10 | CEO UX + Sentinel hardening | Not started |
-| S11 | CEO-authorised paper pilot | Not started |
+| S0 | Contracts, policy and research architecture | **Implemented and verified** |
+| S1 | CEO identity, named students and mobile app shell | **Merged to main** |
+| S2 | Historical XAUUSD ingestion and as-of context | **Draft PR #2; real data rights/verification outstanding** |
+| S3 | Conservative quote-based historical simulator | **Draft PR #3; synthetic test evidence only** |
+| S4 | Scout A, Strategist, Scout B and Guardian baseline | **Draft PR #4; offline research only** |
+| S5 | Versioned skills and Good/Bad memory | **Draft PR #5; research memories only** |
+| S6 | Neural training and recoverable checkpoints | **Draft PR #7; mobile CI dependency fix under verification** |
+| S7 | Independent numeric Examiner | **Draft PR #8; no qualification authority; CI fix under verification** |
+| S8 | Autonomous Academy research scheduling | **Draft PR #9; fixture-only worker and durable queue, CI passed** |
+| S9 | Strategy evolution and peer research lessons | **Draft PR #10; mentorship unqualified, CI passed** |
+| S10 | CEO Sentinel and safety latch | **Draft PR #11; research safety only, latest CI passed** |
+| S11 | Paper pilot readiness | **Draft PR #12; preflight gate only, no pilot or execution, CI passed** |
+
+**Review status (26 October 2026):** S2–S11 are stacked draft PRs, not merged or independently accepted for production. Sprint 6 also has an obsolete alternate PR #6; use PR #7 as the canonical S6 implementation. No licensed verified XAUUSD dataset, independent model qualification, paper broker, deployment approval or live broker integration. See the sprint-specific Checker records below.
 
 ## Sprint 0 — PDCA
 
