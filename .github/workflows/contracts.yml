@@ -51,6 +51,7 @@ jobs:
       - name: Install app and browser runner
         run: |
           python -m pip install -e './backend[dev]'
+          python -m pip install 'numpy>=1.26,<3'
           cd frontend && npm install --no-audit --no-fund
           npx playwright install --with-deps chromium
       - name: Seed ephemeral CEO and start local application
@@ -75,6 +76,10 @@ jobs:
               except Exception:
                   time.sleep(1)
           else:
+              from pathlib import Path
+              for name in ('/tmp/agentic-api.log', '/tmp/agentic-vite.log'):
+                  path=Path(name)
+                  print(f'--- {name} ---\n' + (path.read_text()[-2000:] if path.exists() else 'missing log'))
               raise RuntimeError('Local app did not start')
           PY
           cd frontend && npx playwright test
