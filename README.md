@@ -1,10 +1,10 @@
 # Agentic Trading
 
-Independent, research-first academy for named AI trading students. **Sprint 1 is merged. Sprint 2 adds research-only XAUUSD M15 CSV import, immutable raw/normalized files, structural quality reports, historical context queries and an import panel under Home.** No real provider has been connected or approved; all imports remain quarantined. There is no ML training, broker connection, order execution, financial performance data, or qualification engine yet.
+Independent, research-first academy for named AI trading students. **Sprints 0–11 are merged into `main` for source-code evaluation.** The app includes a CEO dashboard, named students, historical import and offline simulation, research intelligence, skill/memory history, experimental neural training, a provisional Examiner, research Academy, strategy evolution, Sentinel and paper-readiness reporting. **This is not a deployed web service or a qualified trading system.** Historical imports remain quarantined until independently verified; no broker, paper or live order execution is available.
 
 **The GitHub repository is public by the owner's choice. Source code is public; the CEO interface is password-protected and is not deployed. Never commit credentials, account data, student private histories or market-data purchases.**
 
-## Sprint 2 — run locally
+## Evaluate the merged research build locally
 
 Requires Python 3.11+ and Node.js 20+. Use two terminals.
 
@@ -13,7 +13,8 @@ python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
 pip install -e './backend[dev]'
 
-# Set DATABASE_URL and SESSION_SECRET for the current shell (or use dev defaults).
+export DATABASE_URL="sqlite:///$(pwd)/agentic_eval.sqlite3"  # use one absolute SQLite path
+export SESSION_SECRET="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
 cd backend
 alembic -c alembic.ini upgrade head
 cd ..
@@ -73,12 +74,12 @@ provenance. Downloading requires `--download` and valid permitted access; it
 is not enabled by default. **No real provider export or licence has been validated**;
 all imported CSV files remain quarantined. See `docs/DATA_IMPORT.md`.
 
-## Sprint 3 — historical replay research engine (review branch)
+## Sprint 3 — historical replay research engine (merged)
 
 The optional `agentic_trading.simulator` module replays guarded XAUUSD research instructions against **genuine bid/ask M1-shaped inputs**; its included fixtures are explicitly synthetic. It models spread, two commissions, adverse slippage, stop/target conservatism, gap losses, expiry, missing data, risk limits, immutable ledger records and reproducible fingerprints. No browser/API trading endpoint has been added. To see a synthetic-only smoke demonstration, run `python scripts/demo_historical_replay.py`. Read [Replay Rules](docs/HISTORICAL_REPLAY.md) and [Sprint 3 Review](docs/SPRINT3_CHECK.md). The S2 provenance gate remains open and no unverified import is permitted to qualify a student.
 
 
-## Sprint 4 — offline intelligence pipeline (review branch)
+## Sprint 4 — offline intelligence pipeline (merged)
 
 `agentic_trading.intelligence` adds deterministic Scout A regime analysis,
 Strategist B trend/breakout/range proposals, empirical closed-trade Scout B scoring,
@@ -90,13 +91,13 @@ Run `python scripts/demo_research_intelligence.py` for **synthetic-only** output
 Read [Intelligence Rules](docs/TRADING_INTELLIGENCE.md) and
 [Sprint 4 Checker Report](docs/SPRINT4_CHECK.md).
 
-## Sprint 5 — Skill Library and research memory (draft)
+## Sprint 5 — Skill Library and research memory (merged)
 
-The proposed S5 branch adds a versioned Skill Library (`GET /v1/skills/catalog`), student skill-progress summaries and a closed-trade Good/Bad/Flat episode archive at `GET /v1/students/{id}/memory`. Every archived outcome is derived from net P&L after spread, slippage and fees, with full source/proposal hashes and UTC time visibility. The internal recall function only retrieves **training-partition** experiences available before a decision time, and always remains per student. Synthetic and quarantined episodes **do not qualify** real trading ability. See `docs/SKILLS_MEMORY.md`.
+Sprint 5 adds a versioned Skill Library (`GET /v1/skills/catalog`), student skill-progress summaries and a closed-trade Good/Bad/Flat episode archive at `GET /v1/students/{id}/memory`. Every archived outcome is derived from net P&L after spread, slippage and fees, with full source/proposal hashes and UTC time visibility. The internal recall function only retrieves **training-partition** experiences available before a decision time, and always remains per student. Synthetic and quarantined episodes **do not qualify** real trading ability. See `docs/SKILLS_MEMORY.md`.
 
-No neural training workers, broker access or paper/live trading are enabled. The independent Examiner is not yet implemented.
+Offline neural research training and a provisional independent Examiner are implemented in later sprints, but neither is connected to automatic promotion or trading. No broker access or paper/live orders are enabled.
 
-## Sprint 6 — offline neural research (review)
+## Sprint 6 — offline neural research (merged)
 
 CPU PyTorch neural baseline and restartable/checksum-verified training now live **in code only**; no automatic jobs, model qualifications or broker operations. See [`docs/NEURAL_TRAINING.md`](docs/NEURAL_TRAINING.md), `docs/SPRINT6_CHECK.md` and `scripts/train_student_offline.py`. Training history is visible in Students → selected student → Training; blank until an offline worker has suitable closed research episodes. Synthetic/quarantined data is never evidence of profitability.
 
@@ -119,3 +120,13 @@ Sentinel scans research integrity and the CEO may set a durable stop latch. No u
 ## Sprint 11 — paper readiness, not paper trading
 
 CEO-readable paper readiness reports explicitly enumerate missing licence, data, Examiner, Registrar, execution realism and approval prerequisites. Every request stays blocked. No paper account, orders, broker connectivity or live operations are enabled. See `docs/PAPER_PILOT.md`.
+
+## Evaluation checklist (source build)
+
+1. **Home:** inspect the authenticated CEO dashboard and historical CSV-import panel. Imported files are always quarantined, not automatically qualified.
+2. **Students:** create and rename a student, set a research learning plan, and inspect Skills, Memory, Training and Exams. Empty training/exam panels are expected before suitable offline research jobs have run.
+3. **Research demos:** from the repository root, run `python scripts/demo_historical_replay.py` and `python scripts/demo_research_intelligence.py`. These demonstrate synthetic-only offline research, **not verified profitability**.
+4. **Trading:** confirm execution modes remain disabled. The CEO Sentinel and Paper Readiness views explain the research-only safety gates. Approval requests in this build do **not** start trading.
+5. **Tests:** run `python -m pytest backend/tests -q` and `cd frontend && npm run build` to re-check backend and frontend locally. Latest GitHub CI status is visible under the repository's Actions tab.
+
+For the completed engineering review, see [S0–S11 Programme Review](docs/PROGRAM_END_REVIEW.md). For deployed access from another device, a **separate secured preview deployment** would be needed; do not expose this development server publicly.
