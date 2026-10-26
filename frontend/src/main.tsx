@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Activity, ArrowLeft, ArrowRight, BarChart3, BookOpen, Bot, Check, ChevronRight, ClipboardList, Database, GraduationCap, Home, Layers3, LockKeyhole, LogOut, Plus, RefreshCw, ShieldCheck, ShieldOff, Sparkles, UserPlus, Users, X, AlertCircle, Settings2, BookMarked, Search, Target, Clock3, FileUp, FileCheck2 } from 'lucide-react'
+import { Activity, ArrowLeft, ArrowRight, BarChart3, BookOpen, Bot, Check, ChevronRight, ClipboardList, Database, GraduationCap, Home, Layers3, LockKeyhole, LogOut, Plus, RefreshCw, ShieldCheck, ShieldOff, Sparkles, UserPlus, Users, X, AlertCircle, Settings2, BookMarked, Search, Target, Clock3, FileUp, FileCheck2, GitBranch, ShieldAlert } from 'lucide-react'
 import { api, APIError, MARKETS, SKILLS, setCsrf } from './api'
-import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, PlanInput, Skill, Student, StudentInput, StudentSkillProgress, StudentMemory, StudentTrainingHistory, StudentExamHistory, Tab, TradingMode } from './api'
+import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, PlanInput, Skill, Student, StudentInput, StudentSkillProgress, StudentMemory, StudentTrainingHistory, StudentExamHistory, AcademyState, EvolutionState, SentinelState, Tab, TradingMode } from './api'
 import './styles.css'
 
 const NUM_FORMAT = new Intl.NumberFormat('en-GB')
@@ -268,20 +268,45 @@ function ProfileExamsPane({ student }: { student: Student }) {
       </div>)}</div>}
     </div></section>
 }
+function ProfileAcademyPane({ student }: { student: Student }) {
+  const [value,setValue] = useState<AcademyState|null>(null)
+  const [error,setError] = useState('')
+  useEffect(() => { let active=true; void api<AcademyState>(`/v1/students/${student.id}/academy`).then(r=>{if(active)setValue(r)}).catch(e=>{if(active)setError(String(e))}); return ()=>{active=false} },[student.id])
+  return <section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">RESEARCH SCHEDULER</p><h3>Academy lessons</h3></div><GraduationCap size={18}/></div><div className="panel-content">
+    {error && <p role="alert">{error}</p>}{!value && !error && <p>Loading Academy…</p>}
+    {value && <><p className="skills-disclaimer">{value.note}</p><div className="plan-row"><span>Next lesson</span><strong>{value.curriculum.next_lesson}</strong></div><div className="plan-row"><span>Learning plan</span><strong>v{value.curriculum.plan_version}</strong></div>
+      {!value.jobs.length ? <div className="dataset-empty">No scheduled research jobs yet.</div> : value.jobs.map(job=><div key={job.id} className="memory-row"><strong>{job.market} · {job.tactic}</strong><span className="pill pill-muted">{titleCase(job.state)}</span><p>Attempt {job.attempts} · Unqualified research</p></div>)}</>}
+  </div></section>
+}
+function ProfileEvolutionPane({ student }: { student: Student }) {
+  const [value,setValue] = useState<EvolutionState|null>(null)
+  const [error,setError] = useState('')
+  useEffect(() => { let active=true; void api<EvolutionState>(`/v1/students/${student.id}/evolution`).then(r=>{if(active)setValue(r)}).catch(e=>{if(active)setError(String(e))});return ()=>{active=false} },[student.id])
+  return <section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">STRATEGY DNA</p><h3>Evolution tree</h3></div><GitBranch size={18}/></div><div className="panel-content">
+  {error && <p role="alert">{error}</p>}{!value && !error && <p>Loading strategy evolution…</p>}
+  {value && <><p className="skills-disclaimer">Research candidates only. Inheritance does not confer proficiency or trading rights.</p>
+    {!value.tree.strategies.length && <div className="dataset-empty">No strategy versions recorded yet.</div>}
+    {value.tree.strategies.map(revision=><div key={revision.id} className="memory-row"><div className="skill-progress-head"><strong>{revision.family} v{revision.version}</strong><span className="pill pill-muted">Candidate</span></div><p>{revision.market} · {revision.tactic} · {revision.parent_ids.length} parent(s)</p><small>DNA {revision.dna_sha256.slice(0,12)}…</small></div>)}
+    <h3>Peer lessons</h3>{!value.lessons.length ? <p className="muted">No lessons shared with this student.</p> : value.lessons.map(l=><p key={l.id}>{l.skill_id} · Research material</p>)}
+    <p className="skills-disclaimer">Mentorship: {value.mentor_status.blocker}</p></>}
+  </div></section>
+}
 function StudentProfile({ student, onBack, onEdit }: { student: Student; onBack: () => void; onEdit: () => void }) {
-  const [section, setSection] = useState<'overview' | 'skills' | 'memory' | 'training' | 'exams'>('overview')
+  const [section, setSection] = useState<'overview' | 'skills' | 'memory' | 'training' | 'exams' | 'academy' | 'evolution'>('overview')
   const history = student.plan_history ?? [student.learning_plan]
   return <div className="page-enter">
     <button className="back-link" onClick={onBack}><ArrowLeft size={16}/> All students</button>
     <div className="profile-head"><div className="student-avatar student-avatar-lg">{student.name[0]?.toUpperCase()}</div><div className="profile-name"><p className="eyebrow">STUDENT / {shortId(student)}</p><h1>{student.name}</h1><div className="profile-meta"><ModePill mode={student.learning_plan.mode}/><span className="pill pill-muted">Awaiting research</span><span className="muted">Enrolled {friendlyDate(student.created_at)}</span></div></div><button className="btn btn-secondary" onClick={onEdit}><Settings2 size={17}/> Change direction</button></div>
     <div className="profile-summary"><Sparkles size={20}/><div><strong>Academy briefing</strong><p>{student.name} has been enrolled with {student.learning_plan.mode === 'autonomous' ? 'an autonomous research plan. Academy will select learning targets when training is available.' : `a CEO-directed plan covering ${student.learning_plan.markets.join(', ')} and ${student.learning_plan.skills.map(titleCase).join(', ')}.`} Automatic training has not started. Neural research runs are currently offline-only and require archived closed training examples.</p></div></div>
-    <div className="section-tabs" role="tablist" aria-label="Student profile sections">{(['overview','skills','memory','training','exams'] as const).map(tab => <button key={tab} role="tab" aria-selected={section === tab} className={section === tab ? 'active' : ''} onClick={() => setSection(tab)}>{titleCase(tab)}</button>)}</div>
+    <div className="section-tabs" role="tablist" aria-label="Student profile sections">{(['overview','skills','memory','training','exams','academy','evolution'] as const).map(tab => <button key={tab} role="tab" aria-selected={section === tab} className={section === tab ? 'active' : ''} onClick={() => setSection(tab)}>{titleCase(tab)}</button>)}</div>
     {section === 'overview' && <div className="two-columns"><section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">CURRENT DIRECTION</p><h3>Learning plan <span className="version">v{student.learning_plan.version}</span></h3></div><Target size={18}/></div><div className="panel-content"><div className="plan-row"><span>Mode</span><ModePill mode={student.learning_plan.mode}/></div><div className="plan-row"><span>Target markets</span><strong>{student.learning_plan.markets.length ? student.learning_plan.markets.join(', ') : 'Academy selected (future)'}</strong></div><div className="plan-row"><span>Target skills</span><strong>{student.learning_plan.skills.length ? student.learning_plan.skills.map(titleCase).join(', ') : 'Academy selected (future)'}</strong></div><div className="plan-row"><span>Qualification</span><strong>Not yet assessed</strong></div><button className="text-action" onClick={onEdit}>Adjust learning plan <ArrowRight size={15}/></button></div></section>
       <section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">VERSION HISTORY</p><h3>Development record</h3></div><Clock3 size={18}/></div><div className="panel-content"><div className="timeline">{[...history].reverse().map((plan: LearningPlan) => <div key={plan.version} className="timeline-item"><div className="timeline-mark"/><div><strong>Learning plan v{plan.version}</strong><p>{plan.reason}</p><small>{friendlyDate(plan.created_at)} · {plan.mode === 'autonomous' ? 'Autonomous' : 'CEO-directed'}</small></div></div>)}</div></div></section></div>}
     {section === 'skills' && <ProfileSkillsPane student={student}/>}
     {section === 'memory' && <ProfileMemoryPane student={student}/>}
     {section === 'training' && <ProfileTrainingPane student={student}/>}
     {section === 'exams' && <ProfileExamsPane student={student}/>}
+    {section === 'academy' && <ProfileAcademyPane student={student}/>}
+    {section === 'evolution' && <ProfileEvolutionPane student={student}/>}
   </div>
 }
 function Header({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
@@ -344,16 +369,34 @@ function DataEnginePanel() {
     </div>
   </section>
 }
+function SentinelPanel() {
+  const [state,setState]=useState<SentinelState|null>(null)
+  const [error,setError]=useState('')
+  const [busy,setBusy]=useState(false)
+  const refresh=useCallback(()=>{void api<SentinelState>('/v1/sentinel/report').then(setState).catch(e=>setError(String(e)))},[])
+  useEffect(()=>{refresh()},[refresh])
+  const stop=async()=>{setBusy(true);setError('');try { await api('/v1/safety/emergency-stop','POST');refresh() } catch(e){setError(String(e))} finally{setBusy(false)}}
+  return <section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">SAFETY / SENTINEL</p><h3>Research integrity</h3></div><ShieldAlert size={19}/></div><div className="panel-content">
+  <div className="plan-row"><span>Scanner</span><strong>{state ? titleCase(state.status) : 'Checking…'}</strong></div>
+  <div className="plan-row"><span>Trading safety latch</span><strong>Locked</strong></div>
+  <div className="plan-row"><span>Source verification</span><strong>Outstanding</strong></div>
+  {state?.findings.map((f,i)=><p key={i} className="skills-disclaimer">{f.area}: {f.reason}</p>)}
+  {error && <p role="alert" className="message-error">{error}</p>}
+  <button className="btn btn-secondary" type="button" onClick={()=>void stop()} disabled={busy}><ShieldOff size={16}/> Engage emergency stop</button>
+  <p className="muted">Stop is latched and has no in-app unlock. Paper/live trading are not available.</p>
+  </div></section>
+}
 function HomePage({ dashboard, onNew, onStudents }: { dashboard: Dashboard | null; onNew: () => void; onStudents: () => void }) {
   const rows = [{ label: 'Enrolled students', value: dashboard ? NUM_FORMAT.format(dashboard.students_total) : '—', icon: Users, detail: 'Created AI identities' },
     { label: 'Students training', value: dashboard ? NUM_FORMAT.format(dashboard.students_training) : '—', icon: GraduationCap, detail: 'Workers not enabled' },
     { label: 'Qualified strategies', value: dashboard ? NUM_FORMAT.format(dashboard.research_qualified) : '—', icon: ShieldCheck, detail: 'Requires independent exams' },
     { label: 'System status', value: dashboard ? 'Online' : '—', icon: Activity, detail: 'API connection status' }]
   return <div className="page-enter"><Header title="Overview" description="Your research command centre. A clear view of what exists, what is learning and what needs your decision." action={<button className="btn btn-primary" onClick={onNew}><Plus size={17}/> New student</button>}/>
-    <div className="scope-banner"><span className="scope-dot"/><span><strong>Research environment</strong> · No market feed, broker account or trading permission is active.</span><span className="scope-stage">SPRINT 02</span></div>
+    <div className="scope-banner"><span className="scope-dot"/><span><strong>Research environment</strong> · No market feed, broker account or trading permission is active.</span><span className="scope-stage">RESEARCH · S10</span></div>
     <div className="metrics-grid">{rows.map(row => <div className="surface metric-card" key={row.label}><div className="metric-top"><span>{row.label}</span><row.icon size={19}/></div><strong>{row.value}</strong><small>{row.detail}</small></div>)}</div>
     <div className="dashboard-grid"><section className="surface panel overview-main"><div className="panel-heading"><div><p className="eyebrow">FINANCIAL PERFORMANCE</p><h3>Trading overview</h3></div><span className="pill pill-muted"><ShieldOff size={13}/> Disabled</span></div><div className="scope-selector"><span>Historical</span><span>Paper</span><span>Live</span></div><div className="blank-chart"><BarChart3 size={30} strokeWidth={1.2}/><strong>No performance data yet</strong><p>Equity curves, realised net P&amp;L and trade journals require verified market data and a validated simulator.</p><small>Not zero profit. No financial results exist.</small></div></section>
       <div className="dashboard-aside"><section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">ACTION CENTRE</p><h3>Needs attention</h3></div><span className="count-badge">{dashboard?.attention.length ?? 0}</span></div><div className="notice-list"><div className="notice-item"><div className="notice-icon"><Database size={17}/></div><div><strong>Historical data onboarding</strong><p>Import XAUUSD data and review quality; source verification is still required.</p><span>Research prerequisites</span></div><ChevronRight size={16}/></div></div></section><section className="surface panel quick-panel"><div className="panel-heading"><div><p className="eyebrow">ACADEMY</p><h3>Start building your cohort</h3></div><Users size={19}/></div><div className="panel-content"><p className="muted">Give your students identities and choose their learning direction before data and training come online.</p><button className="btn btn-secondary btn-wide" onClick={onStudents}>Open student academy <ArrowRight size={16}/></button></div></section></div></div>
+    <SentinelPanel/>
     <DataEnginePanel/>
     <div className="footer-note"><LockKeyhole size={14}/> No orders, positions, broker balances or live deployment controls are available in this sprint.</div>
   </div>

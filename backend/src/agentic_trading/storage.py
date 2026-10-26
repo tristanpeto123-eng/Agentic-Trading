@@ -195,3 +195,12 @@ class PeerLesson(Base):
     payload: Mapped[dict] = mapped_column(JSON,nullable=False)
     payload_sha256: Mapped[str] = mapped_column(String(64),unique=True,nullable=False)
     __table_args__=(Index('ix_peer_target','target_student_id'),)
+
+
+class SafetyLatch(Base):
+    """Global deny latch; no API unlock available until future CEO approval gate."""
+    __tablename__='safety_latches'
+    id: Mapped[str] = mapped_column(String(36),primary_key=True)
+    reason: Mapped[str] = mapped_column(String(200),nullable=False)
+    actor_id: Mapped[str] = mapped_column(String(36),ForeignKey('ceo_users.id'),nullable=False)
+    locked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),nullable=False)

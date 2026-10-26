@@ -28,6 +28,7 @@ from agentic_trading.neural_training import student_training_runs, TrainingError
 from agentic_trading.examiner import student_exam_history, ExaminationError
 from agentic_trading.academy import lesson_plan, student_jobs, AcademyError
 from agentic_trading.evolution import student_evolution, peer_lessons, mentorship_eligibility, EvolutionError
+from agentic_trading.sentinel import scan_health, engage_stop, safety_latch, SentinelError
 from agentic_trading.settings import Settings
 from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, new_session_factory
 
@@ -108,12 +109,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @api.get("/health")
     def health():
-        return {"status": "ok", "component": "api", "sprint": "S9"}
+        return {"status": "ok", "component": "api", "sprint": "S10"}
 
     @api.get("/v1/capabilities")
     def capabilities():
         return {
-            "name": "Agentic Trading", "stage": "sprint_9_evolution",
+            "name": "Agentic Trading", "stage": "sprint_10_sentinel",
             "research_training_enabled": False, "historical_execution_enabled": False,
             "paper_trading_enabled": False, "live_trading_enabled": False,
             "broker_connected": False, "student_creation_enabled": True,
@@ -122,7 +123,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "independent_skill_mastery_enabled": False, "automatic_memory_ingest_enabled": False,
             "offline_neural_research_training_available": True, "automatic_training_enabled": False,
             "independent_examiner_enabled": False,
-            "offline_research_examiner_available": True, "academy_scheduler_available": True, "strategy_dna_read_enabled": True, "peer_research_lessons_enabled": True, "independent_examination_qualification_enabled": False,
+            "offline_research_examiner_available": True, "academy_scheduler_available": True, "strategy_dna_read_enabled": True, "peer_research_lessons_enabled": True, "sentinel_read_enabled": True, "emergency_stop_enabled": True, "independent_examination_qualification_enabled": False,
         }
 
     @api.post("/v1/auth/login")
@@ -313,6 +314,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "qualification": "unqualified", "automatic_promotion": False}
         except EvolutionError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    @api.get("/v1/sentinel/report")
+    def sentinel_report(_: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):
+        try:
+            return scan_health(session, data_root=data_root, checkpoints_root=data_root/'weights',
+                               now=datetime.now(timezone.utc))
+        except (SentinelError, OSError, ValueError) as exc:
+            raise HTTPException(status_code=409, detail=f"Sentinel scan failed: {exc}") from exc
+
+    @api.post("/v1/safety/emergency-stop")
+    def emergency_stop(user: CEO = Depends(require_csrf), session: Session = Depends(db)):
+        result=engage_stop(session,user.id,'CEO manually engaged emergency safety stop')
+        session.add(AuditEvent(actor_id=user.id,action='safety.emergency_stop',subject_id='global',
+                               detail={'locked':True}))
+        session.commit()
+        return result
 
     @api.get("/v1/students", response_model=list[StudentResponse])
     def students(_: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):
