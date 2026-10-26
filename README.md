@@ -115,3 +115,7 @@ Research Strategy DNA and peer lessons are now versioned and tamper-checked. No 
 ## Sprint 10 executive safety interface
 
 Sentinel scans research integrity and the CEO may set a durable stop latch. No unlock and no execution services are provided. Student Academy and Strategy DNA views are read-only. See `docs/SENTINEL.md`.
+
+## Sprint 11 — paper readiness, not paper trading
+
+CEO-readable paper readiness reports explicitly enumerate missing licence, data, Examiner, Registrar, execution realism and approval prerequisites. Every request stays blocked. No paper account, orders, broker connectivity or live operations are enabled. See `docs/PAPER_PILOT.md`.

@@ -204,3 +204,15 @@ class SafetyLatch(Base):
     reason: Mapped[str] = mapped_column(String(200),nullable=False)
     actor_id: Mapped[str] = mapped_column(String(36),ForeignKey('ceo_users.id'),nullable=False)
     locked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),nullable=False)
+
+
+class PaperPilotRequest(Base):
+    """CEO-scope review record, never a standing paper or live authorisation."""
+    __tablename__='paper_pilot_requests'
+    id: Mapped[str] = mapped_column(String(36),primary_key=True)
+    student_id: Mapped[str] = mapped_column(String(36),ForeignKey('students.id'),nullable=False)
+    ceo_id: Mapped[str] = mapped_column(String(36),ForeignKey('ceo_users.id'),nullable=False)
+    payload: Mapped[dict] = mapped_column(JSON,nullable=False)
+    payload_sha256: Mapped[str] = mapped_column(String(64),unique=True,nullable=False)
+    status: Mapped[str] = mapped_column(String(40),nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),nullable=False)

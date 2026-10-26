@@ -119,3 +119,5 @@ export const SKILLS: { id: Skill; label: string }[] = [
 export type AcademyState = { curriculum: { mode: Mode; plan_version: number; market_targets: string[]; tactic_targets: string[]; next_lesson: string }; jobs: { id: string; state: string; market: string; tactic: string; attempts: number; qualification: 'unqualified' }[]; autonomous_training_enabled: false; note: string }
 export type EvolutionState = { tree: { strategies: {id:string; family:string; version:number; market:string; tactic:string; parent_ids:string[]; dna_sha256:string; qualified:false}[] }; lessons: {id:string;source_student_id:string;skill_id:string;mentor_qualified:false}[]; mentor_status:{eligible:false;blocker:string}; qualification:'unqualified' }
 export type SentinelState = { status: 'research_safe'|'attention'|'blocked'; findings: {area:string;severity:string;reason:string}[]; safety: {locked:true;reason:string;paper_enabled:false;live_enabled:false}; research_data_verified:false }
+
+export type PaperReadiness = { ready:false; activation_allowed:false; paper_trading_enabled:false; live_trading_enabled:false; blockers:string[]; next_action:string }
