@@ -29,6 +29,7 @@ from agentic_trading.examiner import student_exam_history, ExaminationError
 from agentic_trading.academy import lesson_plan, student_jobs, AcademyError
 from agentic_trading.evolution import student_evolution, peer_lessons, mentorship_eligibility, EvolutionError
 from agentic_trading.sentinel import scan_health, engage_stop, safety_latch, SentinelError
+from agentic_trading.paper_readiness import evaluate_readiness, paper_requests, PaperReadinessError
 from agentic_trading.settings import Settings
 from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, new_session_factory
 
@@ -109,12 +110,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @api.get("/health")
     def health():
-        return {"status": "ok", "component": "api", "sprint": "S10"}
+        return {"status": "ok", "component": "api", "sprint": "S11"}
 
     @api.get("/v1/capabilities")
     def capabilities():
         return {
-            "name": "Agentic Trading", "stage": "sprint_10_sentinel",
+            "name": "Agentic Trading", "stage": "sprint_11_paper_readiness",
             "research_training_enabled": False, "historical_execution_enabled": False,
             "paper_trading_enabled": False, "live_trading_enabled": False,
             "broker_connected": False, "student_creation_enabled": True,
@@ -123,7 +124,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "independent_skill_mastery_enabled": False, "automatic_memory_ingest_enabled": False,
             "offline_neural_research_training_available": True, "automatic_training_enabled": False,
             "independent_examiner_enabled": False,
-            "offline_research_examiner_available": True, "academy_scheduler_available": True, "strategy_dna_read_enabled": True, "peer_research_lessons_enabled": True, "sentinel_read_enabled": True, "emergency_stop_enabled": True, "independent_examination_qualification_enabled": False,
+            "offline_research_examiner_available": True, "academy_scheduler_available": True, "strategy_dna_read_enabled": True, "peer_research_lessons_enabled": True, "sentinel_read_enabled": True, "emergency_stop_enabled": True, "paper_readiness_report_enabled": True, "independent_examination_qualification_enabled": False,
         }
 
     @api.post("/v1/auth/login")
@@ -330,6 +331,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                                detail={'locked':True}))
         session.commit()
         return result
+
+    @api.get("/v1/paper/readiness")
+    def paper_readiness(_: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):
+        return evaluate_readiness(session)
+
+    @api.get("/v1/paper/review-requests")
+    def paper_review_history(_: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):
+        try:
+            return {"requests": paper_requests(session), "paper_trading_enabled": False,
+                    "note": "Review records do not authorise a pilot."}
+        except PaperReadinessError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @api.get("/v1/students", response_model=list[StudentResponse])
     def students(_: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):

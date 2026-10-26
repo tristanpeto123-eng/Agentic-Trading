@@ -127,3 +127,13 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 **Check:** S0–S10 regressions, migration `0008_s10`, GitHub frontend/mobile and auth/CORS safety gates.
 
 **Act:** Never equate integrity health with a licence, model qualification or permission to trade. See `docs/SPRINT10_CHECK.md`.
+
+## Sprint 11 — PDCA (fail-closed paper readiness)
+
+**Plan:** Deliver auditable paper readiness and prevent accidental early paper activation.
+
+**Do:** CEO read-only readiness report, blocked immutable scoped review records, guardrail tests and Trading Paper preflight UX.
+
+**Check:** S0–S11 suite, migration `0009_s11`, GitHub backend/frontend/mobile CI and real-data evidence gap.
+
+**Act:** Pilot cannot launch on quarantined data or numerical-only exams. Exact CEO paper activation is a future approval gate, **not granted** by the user's instruction to proceed through sprints. See `docs/SPRINT11_CHECK.md`.

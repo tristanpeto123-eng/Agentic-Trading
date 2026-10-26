@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Activity, ArrowLeft, ArrowRight, BarChart3, BookOpen, Bot, Check, ChevronRight, ClipboardList, Database, GraduationCap, Home, Layers3, LockKeyhole, LogOut, Plus, RefreshCw, ShieldCheck, ShieldOff, Sparkles, UserPlus, Users, X, AlertCircle, Settings2, BookMarked, Search, Target, Clock3, FileUp, FileCheck2, GitBranch, ShieldAlert } from 'lucide-react'
 import { api, APIError, MARKETS, SKILLS, setCsrf } from './api'
-import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, PlanInput, Skill, Student, StudentInput, StudentSkillProgress, StudentMemory, StudentTrainingHistory, StudentExamHistory, AcademyState, EvolutionState, SentinelState, Tab, TradingMode } from './api'
+import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, PlanInput, Skill, Student, StudentInput, StudentSkillProgress, StudentMemory, StudentTrainingHistory, StudentExamHistory, AcademyState, EvolutionState, SentinelState, PaperReadiness, Tab, TradingMode } from './api'
 import './styles.css'
 
 const NUM_FORMAT = new Intl.NumberFormat('en-GB')
@@ -411,17 +411,32 @@ function StudentsPage({ students, onNew, onOpen }: { students: Student[]; onNew:
     <section className="academy-bottom"><div className="academy-icon"><GraduationCap size={20}/></div><div><strong>A growing academy, not identical bots.</strong><p>Each student will gain independent memories, Strategy DNA, specialist skills and research qualifications. Collaborations and examinations are scheduled for later sprints.</p></div></section>
   </div>
 }
+function PaperReadinessPanel() {
+  const [state,setState]=useState<PaperReadiness|null>(null)
+  const [error,setError]=useState('')
+  useEffect(()=>{let active=true; void api<PaperReadiness>('/v1/paper/readiness').then(data=>{if(active)setState(data)}).catch(e=>{if(active)setError(String(e))});return()=>{active=false}},[])
+  return <section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">SPRINT 11 / PRE-FLIGHT</p><h3>Paper pilot readiness</h3></div><ShieldOff size={18}/></div><div className="panel-content">
+    <p className="skills-disclaimer">Research is not permission to trade. Paper activation remains locked until verified data, independent exams, operational checks and your exact authorisation.</p>
+    {error && <p role="alert" className="message-error">{error}</p>}
+    {!state && !error && <p className="muted">Checking readiness…</p>}
+    {state && <><div className="plan-row"><span>Paper pilot</span><strong>Not authorised</strong></div>
+      <div className="plan-row"><span>Live operations</span><strong>Disabled</strong></div>
+      <div className="skill-progress-list">{state.blockers.map((blocker,i)=><div className="memory-row" key={i}><ShieldAlert size={15}/> {blocker}</div>)}</div>
+      <small className="muted">{state.next_action}</small></>}
+  </div></section>
+}
 function TradingPage() {
   const [scope, setScope] = useState<TradingMode>('historical')
   const details: Record<TradingMode, { heading: string; intro: string; next: string }> = {
-    historical: { heading: 'Historical testing not yet available', intro: 'Historical execution will replay verified data with cost-aware fills and immutable journals.', next: 'Planned: Data Engine (S2) and Simulator (S3)' },
-    paper: { heading: 'Paper trading is disabled', intro: 'Paper operations require independently qualified models and explicit CEO authorisation.', next: 'Planned: Paper pilot (S11)' },
+    historical: { heading: 'Offline research only', intro: 'Historical simulator research exists, but verified market data and independent qualification are still unavailable.', next: 'Independent source verification required' },
+    paper: { heading: 'Paper trading is disabled', intro: 'Pilot readiness has been evaluated, but independent data verification and CEO activation are still required.', next: 'Review the pre-flight blockers below' },
     live: { heading: 'Live trading is disabled', intro: 'Real-money trading remains completely outside this programme until separate readiness checks and exact CEO approval.', next: 'Not scheduled in current sprints' },
   }
   return <div className="page-enter"><Header title="Trading" description="Historical, paper and live are completely separate. No artificial balances or trading activity."/>
     <div className="trading-switch" role="tablist" aria-label="Trading environment">{(['historical','paper','live'] as const).map(m => <button key={m} role="tab" aria-selected={scope === m} className={scope === m ? 'active' : ''} onClick={() => setScope(m)}>{titleCase(m)} <span className="mode-disabled">OFFLINE</span></button>)}</div>
     <div className="surface trading-placeholder"><div className="trading-disabled-icon"><ShieldOff size={29}/></div><span className="pill pill-muted">{scope.toUpperCase()} · NOT ENABLED</span><h2>{details[scope].heading}</h2><p>{details[scope].intro}</p><div className="coming-next"><Clock3 size={16}/>{details[scope].next}</div></div>
     <div className="trading-bottom"><div className="surface small-status"><div className="small-status-top"><BarChart3 size={18}/><span>Equity &amp; net P&amp;L</span></div><strong>Not available</strong><small>No results have been generated</small></div><div className="surface small-status"><div className="small-status-top"><ClipboardList size={18}/><span>Trade journal</span></div><strong>Empty</strong><small>Independent journal comes with the simulator</small></div><div className="surface small-status"><div className="small-status-top"><ShieldCheck size={18}/><span>CEO permissions</span></div><strong>None granted</strong><small>No trading model deployed</small></div></div>
+    {scope === 'paper' && <PaperReadinessPanel/>}
   </div>
 }
 function App() {
