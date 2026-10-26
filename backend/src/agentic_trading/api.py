@@ -401,6 +401,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(status_code=409, detail="Student name already in use") from exc
         return output(get_student_or_404(student_id, session), full=True)
 
+    # Optional single-origin mobile preview; default local/test API remains unchanged.
+    from agentic_trading.preview_web import install_preview_routes
+    install_preview_routes(api, cfg, session_factory, limiter)
     return api
 
 
