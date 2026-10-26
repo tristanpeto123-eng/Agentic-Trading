@@ -54,7 +54,10 @@ test('mobile CEO login, student lifecycle, and disabled trading', async ({ page 
 
   await nav.getByRole('button', { name: 'Trading' }).click()
   await expect(page.getByRole('heading', { name: 'Trading', exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Offline research only' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Candle Replay' })).toBeVisible()
+  await expect(page.getByText(/No datasets yet/)).toBeVisible()
+  await expect(page.getByText(/No simulated orders, trades, win rate or equity curves/)).toBeVisible()
+  await page.screenshot({ path: 'screenshots/03-historical-mobile.png', fullPage: true })
   await page.getByRole('tab', { name: /Paper/ }).click()
   await expect(page.getByRole('heading', { name: 'Paper trading is disabled' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Paper pilot readiness' })).toBeVisible()
