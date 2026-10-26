@@ -151,3 +151,20 @@ class ExamRun(Base):
     qualification: Mapped[str] = mapped_column(String(30), nullable=False, default="unqualified")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     __table_args__ = (Index("ix_exams_student_created", "student_id", "created_at"),)
+
+
+class AcademyJob(Base):
+    """Durable versioned research-only job; no authority to promote/deploy."""
+    __tablename__ = 'academy_jobs'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    student_id: Mapped[str] = mapped_column(String(36), ForeignKey('students.id'), nullable=False)
+    plan_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    idempotency_sha256: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    spec: Mapped[dict] = mapped_column(JSON, nullable=False)
+    state: Mapped[str] = mapped_column(String(36), nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    worker_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    result: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    __table_args__ = (Index('ix_academy_student_state', 'student_id', 'state'),)

@@ -103,3 +103,7 @@ CPU PyTorch neural baseline and restartable/checksum-verified training now live 
 ## Sprint 7 — Independent Examiner (research prototype)
 
 A deterministic, offline historical Examiner computes challenger-versus-incumbent/cash-baseline results on common M1 bid/ask and costs. The authenticated Student Exams view exposes immutable reports and explicit provenance limitations. See [`docs/INDEPENDENT_EXAMINER.md`](docs/INDEPENDENT_EXAMINER.md). No independently qualified research, broker connectivity, paper or live trading exists. S2 licensing and verified 12-month XAUUSD data remain outstanding.
+
+## Sprint 8 research Academy
+
+The **offline Academy scheduler** uses bounded, durable idempotent lessons and jobs. Because no verified XAUUSD source exists, normal jobs remain blocked; fixture-only tests never grant research qualification or trading authority. See `docs/ACADEMY.md` and `docs/SPRINT8_CHECK.md`.
