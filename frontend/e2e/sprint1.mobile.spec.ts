@@ -62,7 +62,7 @@ test('mobile CEO login, student lifecycle, and disabled trading', async ({ page 
   await expect(page.getByText(/This demonstration runs on fabricated test data/)).toBeVisible()
   await page.locator('.browser-file-label input[type=file]').setInputFiles({
     name: 'local-m15.csv', mimeType: 'text/csv',
-    buffer: Buffer.from('timestamp_open,open,high,low,close\\n2025-04-07T09:00:00Z,2000,2003,1998,2001\\n2025-04-07T09:15:00Z,2001,2005,2000,2004\\n')
+    buffer: Buffer.from('timestamp_open,open,high,low,close\n2025-04-07T09:00:00Z,2000,2003,1998,2001\n2025-04-07T09:15:00Z,2001,2005,2000,2004\n')
   })
   await expect(page.getByText('local-m15.csv')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Play CSV' })).toBeVisible()
