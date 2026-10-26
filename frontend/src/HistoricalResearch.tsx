@@ -3,7 +3,7 @@ import { api } from './api'
 import type { HistoricalDataset } from './api'
 import { Activity, ArrowLeft, Database, Pause, Play, RefreshCw, ShieldAlert } from 'lucide-react'
 
-type Candle = {
+export type Candle = {
   open_time: string
   available_at: string
   open: string
@@ -26,7 +26,7 @@ const LAST = 62
 const fmt = (value: number) => Number.isFinite(value) ? value.toFixed(2) : '—'
 const when = (s: string) => s ? new Date(s).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }) + ' UTC' : '—'
 
-function CandleChart({ candles }: { candles: Candle[] }) {
+export function CandleChart({ candles }: { candles: Candle[] }) {
   const plotted = useMemo(() => {
     return candles.map((c) => ({ ...c, o: Number(c.open), h: Number(c.high), l: Number(c.low), cl: Number(c.close) }))
       .filter(c => [c.o, c.h, c.l, c.cl].every(Number.isFinite))
@@ -160,7 +160,7 @@ export function HistoricalResearch() {
           </button>
         </div>
       </> : <div className="dataset-empty">No completed candles are available for this dataset.</div>}</>}
-      <p className="historical-warning">No simulated orders, trades, win rate or equity curves are generated here. The independent M1 bid/ask replay engine remains separate and offline; paper/live execution stays locked.</p>
+      <p className="historical-warning">No simulated orders, trades, win rate or equity curves are generated from saved M15 candles in this section. The synthetic M1 engine demo above is separate; paper/live execution stays locked.</p>
     </div>
   </section>
 }
