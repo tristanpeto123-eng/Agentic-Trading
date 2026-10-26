@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, create_engine
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Integer, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
 
@@ -101,3 +101,33 @@ class AuditEvent(Base):
 def new_session_factory(database_url: str):
     engine = create_engine(database_url, pool_pre_ping=True, connect_args={"check_same_thread": False} if database_url.startswith("sqlite:") else {})
     return engine, sessionmaker(bind=engine, expire_on_commit=False)
+
+
+class TrainingRun(Base):
+    """Frozen student research job: NO exam, promotion or trading authority."""
+    __tablename__ = "training_runs"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    student_id: Mapped[str] = mapped_column(String(36), ForeignKey("students.id"), nullable=False)
+    config_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    snapshot_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    config: Mapped[dict] = mapped_column(JSON, nullable=False)
+    snapshot_manifest: Mapped[dict] = mapped_column(JSON, nullable=False)
+    state: Mapped[str] = mapped_column(String(30), nullable=False, default="research_only")
+    qualification: Mapped[str] = mapped_column(String(30), nullable=False, default="unqualified")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    __table_args__ = (Index("ix_training_student_created", "student_id", "created_at"),)
+
+
+class TrainingCheckpoint(Base):
+    """One immutable, checksum-verified, pickle-free weights artifact per epoch."""
+    __tablename__ = "training_checkpoints"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    run_id: Mapped[str] = mapped_column(String(36), ForeignKey("training_runs.id"), nullable=False)
+    epoch: Mapped[int] = mapped_column(Integer, nullable=False)
+    relative_path: Mapped[str] = mapped_column(String(300), nullable=False)
+    artifact_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    snapshot_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    train_loss: Mapped[float] = mapped_column(Float, nullable=False)
+    development_loss: Mapped[float] = mapped_column(Float, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    __table_args__ = (Index("ix_training_run_epoch", "run_id", "epoch", unique=True),)

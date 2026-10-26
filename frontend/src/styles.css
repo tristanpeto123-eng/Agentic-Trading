@@ -22,3 +22,8 @@
 .memory-outcome{font-size:11px;font-weight:700;color:#b7c5d4;text-transform:uppercase}
 .memory-outcome.good{color:#85d7a6}.memory-outcome.bad{color:#f4a2a2}
 @media(max-width:620px){.skill-progress-row,.memory-row{padding:12px}.memory-totals{gap:8px}.memory-totals span{padding:8px 12px}}
+/* Sprint 6 research-only learning curves; no implied trading performance. */
+.training-graph{width:100%;margin-top:14px;background:#071726;border:1px solid #2a4351;border-radius:9px;padding:12px}
+.training-graph svg{width:100%;height:150px;display:block}
+.training-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:#bacbd8;margin-top:6px}
+.training-legend span:first-child{color:#58bfd3}.training-legend span:last-child{color:#e0b270}

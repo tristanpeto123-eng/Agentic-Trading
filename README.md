@@ -95,3 +95,7 @@ Read [Intelligence Rules](docs/TRADING_INTELLIGENCE.md) and
 The proposed S5 branch adds a versioned Skill Library (`GET /v1/skills/catalog`), student skill-progress summaries and a closed-trade Good/Bad/Flat episode archive at `GET /v1/students/{id}/memory`. Every archived outcome is derived from net P&L after spread, slippage and fees, with full source/proposal hashes and UTC time visibility. The internal recall function only retrieves **training-partition** experiences available before a decision time, and always remains per student. Synthetic and quarantined episodes **do not qualify** real trading ability. See `docs/SKILLS_MEMORY.md`.
 
 No neural training workers, broker access or paper/live trading are enabled. The independent Examiner is not yet implemented.
+
+## Sprint 6 — offline neural research (review)
+
+CPU PyTorch neural baseline and restartable/checksum-verified training now live **in code only**; no automatic jobs, model qualifications or broker operations. See [`docs/NEURAL_TRAINING.md`](docs/NEURAL_TRAINING.md), `docs/SPRINT6_CHECK.md` and `scripts/train_student_offline.py`. Training history is visible in Students → selected student → Training; blank until an offline worker has suitable closed research episodes. Synthetic/quarantined data is never evidence of profitability.

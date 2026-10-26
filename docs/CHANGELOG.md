@@ -33,3 +33,8 @@
 - Immutable research closed-trade episodes, costs-derived Good / Bad / Flat, student-isolated time-safe recall excluding validation/holdout.
 - SQL append-only-by-service archive, tamper checks, idempotent internal writes and Alembic migration.
 - Read-only CEO skill/memory API and responsive student profile panels. Training and qualification remain disabled.
+
+## Sprint 6 (review branch)
+- Added offline research-only PyTorch MLP training with safe point-in-time S5 episode snapshots.
+- Added no-pickle SHA-verified checkpoint recovery and per-epoch loss history with Alembic revision `0004_s6`.
+- Added CEO read-only Training panel with learning-loss chart; kept automatic training, trading and qualification disabled.
