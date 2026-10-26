@@ -1,0 +1,55 @@
+name: Render Free iPhone Preview Smoke
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  preview-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check public web preview without credentials
+        env:
+          PREVIEW_BASE: https://agentic-trading-iphone-preview-2026.onrender.com
+        run: |
+          python - <<'PY'
+          import json, os, time, urllib.request, urllib.error
+
+          base = os.environ["PREVIEW_BASE"]
+          def get(path):
+              request = urllib.request.Request(base + path, headers={"User-Agent": "Agentic-Preview-Safety-SMOKE/1"})
+              try:
+                  with urllib.request.urlopen(request, timeout=20) as response:
+                      return response.status, response.read(200000), response.headers
+              except urllib.error.HTTPError as e:
+                  return e.code, e.read(200000), e.headers
+
+          last = None
+          for _ in range(12):
+              try:
+                  code, data, headers = get("/health")
+                  if code == 200 and json.loads(data).get("status") == "ok":
+                      break
+                  last = f"HTTP {code}: {data[:100]!r}"
+              except Exception as e:
+                  last = f"{type(e).__name__}: {e}"
+              time.sleep(10)
+          else:
+              raise AssertionError("Preview health unavailable: " + str(last))
+
+          code, body, headers = get("/")
+          assert code == 200 and b'id="root"' in body, f"SPA missing: {code}"
+          code, body, headers = get("/setup")
+          assert code == 200 and b"CEO login" in body or code == 200 and b'id="root"' in body, f"Setup unavailable: {code}"
+          code, body, headers = get("/v1/students")
+          assert code == 401, f"CEO private API exposed: {code}"
+          code, body, headers = get("/v1/capabilities")
+          assert code == 200, code
+          caps = json.loads(body)
+          for key in ("paper_trading_enabled", "live_trading_enabled", "broker_connected",
+                      "automatic_training_enabled", "historical_data_import_enabled"):
+              assert caps[key] is False, f"Unsafe preview capability: {key}={caps[key]}"
+          print("Render preview: SPA served, CEO API protected, market imports and trading disabled.")
+          PY
