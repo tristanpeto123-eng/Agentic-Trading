@@ -55,6 +55,17 @@ test('mobile CEO login, student lifecycle, and disabled trading', async ({ page 
   await nav.getByRole('button', { name: 'Trading' }).click()
   await expect(page.getByRole('heading', { name: 'Trading', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Candle Replay' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Trade and P&L replay' })).toBeVisible()
+  await page.getByRole('button', { name: 'Run historical demo' }).click()
+  await expect(page.locator('.demo-trade-row').first()).toBeVisible({ timeout: 15000 })
+  await page.getByRole('button', { name: 'Pause' }).click()
+  await expect(page.getByText(/This demonstration runs on fabricated test data/)).toBeVisible()
+  await page.locator('.browser-file-label input[type=file]').setInputFiles({
+    name: 'local-m15.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('timestamp_open,open,high,low,close\\n2025-04-07T09:00:00Z,2000,2003,1998,2001\\n2025-04-07T09:15:00Z,2001,2005,2000,2004\\n')
+  })
+  await expect(page.getByText('local-m15.csv')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Play CSV' })).toBeVisible()
   await expect(page.getByText(/No simulated orders, trades, win rate or equity curves/)).toBeVisible()
   await page.screenshot({ path: 'screenshots/03-historical-mobile.png', fullPage: true })
   await page.getByRole('tab', { name: /Paper/ }).click()
