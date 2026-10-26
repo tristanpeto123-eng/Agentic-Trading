@@ -32,6 +32,7 @@ from agentic_trading.evolution import student_evolution, peer_lessons, mentorshi
 from agentic_trading.sentinel import scan_health, engage_stop, safety_latch, SentinelError
 from agentic_trading.paper_readiness import evaluate_readiness, paper_requests, PaperReadinessError
 from agentic_trading.settings import Settings
+from agentic_trading.historical_store import DATABASE_ARTIFACT_PATH, store_historical_artifacts, verified_candles
 from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, new_session_factory
 
 
@@ -59,6 +60,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Database schema is managed with Alembic; start with `alembic upgrade head`.
     limiter = LoginLimiter()
     data_root = Path(cfg.data_dir) if cfg.data_dir else Path.cwd() / "data_store"
+    postgres_archive = cfg.database_url.startswith("postgresql+")
+    historical_upload_available = (os.environ.get("HISTORICAL_UPLOADS_FORCE_DISABLED") != "1" and
+        (postgres_archive or os.environ.get("PREVIEW_DISABLE_IMPORTS", "") != "1"))
     api = FastAPI(title="Agentic Trading", version=__version__, description="CEO + student foundation. Trading remains disabled.")
     api.add_middleware(
         CORSMiddleware, allow_origins=list(cfg.allowed_origins), allow_credentials=True,
@@ -120,7 +124,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "research_training_enabled": False, "historical_execution_enabled": False,
             "paper_trading_enabled": False, "live_trading_enabled": False,
             "broker_connected": False, "student_creation_enabled": True,
-            "historical_data_import_enabled": os.environ.get("PREVIEW_DISABLE_IMPORTS", "") != "1", "research_data_qualified": False,
+            "historical_data_import_enabled": historical_upload_available, "historical_candle_replay_enabled": True, "research_data_qualified": False,
             "skills_catalog_enabled": True, "episodic_memory_read_enabled": True,
             "independent_skill_mastery_enabled": False, "automatic_memory_ingest_enabled": False,
             "offline_neural_research_training_available": True, "automatic_training_enabled": False,
@@ -181,8 +185,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @api.post("/v1/datasets/import", status_code=201)
     def import_dataset(payload: DatasetImport, user: CEO = Depends(require_csrf), session: Session = Depends(db)):
-        if os.environ.get("PREVIEW_DISABLE_IMPORTS", "") == "1":
-            raise HTTPException(status_code=503, detail="Dataset import is disabled on this ephemeral preview; connect persistent storage before importing.")
+        if not historical_upload_available:
+            raise HTTPException(status_code=503, detail="Historical import requires durable PostgreSQL storage on this free preview.")
         content = payload.csv_content.encode("utf-8")
         digest = sha256(content).hexdigest()
         manifest = payload.source.model_dump(mode="json")
@@ -193,7 +197,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return dataset_view(existing)
         try:
             candles, quality, canonical = ingest_csv(payload.csv_content, payload.source.acquired_at)
-            raw_path, canonical_path = frozen_bytes(data_root, digest, content, canonical)
+            if postgres_archive:
+                raw_path = canonical_path = DATABASE_ARTIFACT_PATH
+            else:
+                raw_path, canonical_path = frozen_bytes(data_root, digest, content, canonical)
         except (DataQualityError, OSError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         row = HistoricalDataset(source_hash=digest, canonical_hash=sha256(canonical).hexdigest(),
@@ -203,6 +210,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         session.add(row)
         try:
             session.flush()
+            if postgres_archive:
+                store_historical_artifacts(session, row.id, content, canonical)
             session.add(AuditEvent(actor_id=user.id, action="dataset.imported", subject_id=row.id,
                                    detail={"source_hash": digest, "rows": len(candles), "state": "quarantined"}))
             session.commit()
@@ -226,15 +235,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="Dataset not found")
         try:
             now = parse_iso_utc(as_of)
-            # Prevent artifact path escapes even if DB is corrupted.
-            root = data_root.resolve()
-            target = (root / row.canonical_path).resolve()
-            if not target.is_relative_to(root):
-                raise DataQualityError("Invalid artifact path")
-            source = (root / row.raw_path).resolve()
-            if not source.is_relative_to(root) or sha256(source.read_bytes()).hexdigest() != row.source_hash:
-                raise DataQualityError("Raw source checksum mismatch")
-            candles = load_candles(root, row.canonical_path, row.canonical_hash)
+            candles = verified_candles(session, row, data_root)
         except (DataQualityError, OSError) as exc:
             raise HTTPException(status_code=409, detail=f"Data integrity check failed: {exc}") from exc
         eligible = [c for c in candles if c.available_at <= now]
@@ -243,6 +244,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {"dataset_id": row.id, "as_of": now, "research_eligible": False,
                 "m15": [x.as_dict() for x in eligible[-16:]], "h1": h1[-8:], "h4": h4[-4:],
                 "note": "Only completed candles are visible. This quarantined dataset cannot qualify research."}
+
+    @api.get("/v1/datasets/{dataset_id}/candles")
+    def research_candles(dataset_id: str, limit: int = 240, before: str | None = None,
+                         _: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):
+        """Time-safe, checksum-verified M15 candle playback, NOT order simulation."""
+        if not 20 <= limit <= 360:
+            raise HTTPException(status_code=422, detail="Candle page size must be 20-360")
+        row = session.get(HistoricalDataset, dataset_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Dataset not found")
+        try:
+            cutoff = parse_iso_utc(before) if before else None
+            candles = verified_candles(session, row, data_root)
+        except (DataQualityError, OSError) as exc:
+            raise HTTPException(status_code=409, detail=f"Data integrity check failed: {exc}") from exc
+        visible = [c for c in candles if c.available_at <= datetime.now(timezone.utc)
+                   and (cutoff is None or c.open_time < cutoff)]
+        page = visible[-limit:]
+        return {"dataset_id": row.id, "source_verified": False, "research_eligible": False,
+                "historical_execution_enabled": False, "bars": [c.as_dict() for c in page],
+                "has_more": len(visible) > len(page), "total_rows": row.quality_report.get("rows", 0),
+                "note": "Candle-only replay, no trades or profitability claims. Source remains quarantined."}
 
     @api.get("/v1/skills/catalog")
     def skill_catalog(_: tuple[CEO, dict] = Depends(current_ceo)):
