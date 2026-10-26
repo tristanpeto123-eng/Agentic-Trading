@@ -53,3 +53,14 @@ imported files can disappear on restart. The preview therefore sets
 - Keep provider data, access tokens, account credentials and personal market
   data out of the public repository.
 - Railway deployments and stored data were not altered by this Render preview.
+
+
+## Historical research mode (S12)
+
+The **Trading → Historical** tab is now an active, CEO-protected XAUUSD **M15 candle replay**, with a time scrubber, play/pause, and earlier-page navigation. It does not place historical/paper/live orders or calculate simulated profits. Imported candle provenance remains **quarantined** until independent licensing and data-quality validation.
+
+**Persistent historical imports require a working Render PostgreSQL connection.** Once `DATABASE_URL` points to PostgreSQL, the app archives both the original CSV and canonical M15 JSONL into an integrity-checked PostgreSQL `historical_dataset_artifacts` table in the same transaction as dataset metadata. This avoids losing the uploaded bytes when the free Render web container restarts. `PREVIEW_DISABLE_IMPORTS=1` remains safe for ephemeral SQLite and is automatically bypassed for PostgreSQL's durable archive. The emergency override `HISTORICAL_UPLOADS_FORCE_DISABLED=1` blocks imports regardless.
+
+To evaluate on iPhone: sign in, open **Trading → Historical**, scroll down to **Data Engine**, upload a genuine source-documented XAUUSD M15 CSV (up to 12 MiB), then press **Refresh datasets** to visualise candle-by-candle playback. The data remains unqualified; M15 OHLC is not a bid/ask M1 execution tape.
+
+If **Import CSV** is still disabled after deployment, check the **Render web service Environment → DATABASE_URL**. It must point to the *persistent Render PostgreSQL instance*, not `sqlite:////tmp/agentic-preview.sqlite3`. Do not paste the database URL or credentials into chat. Existing CEO accounts will be retained only if created in the PostgreSQL database; changing databases changes which accounts are visible. The free PostgreSQL instance expires **2026-11-25** unless renewed/upgraded, so export anything important before then.
