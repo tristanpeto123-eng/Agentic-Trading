@@ -45,6 +45,25 @@ export type StudentTrainingHistory = {
   student_id: string; runs: StudentTrainingRun[]; qualification: 'unqualified'
   automatic_training_enabled: false; note: string
 }
+export type ExamMetrics = {
+  closed_trades: number; rejected_trades: number; unresolved_trades: number
+  wins: number; losses: number; flat: number
+  net_pnl_usd: string; profit_factor: string | null
+  max_drawdown_fraction: string; final_equity_usd: string; journal_sha256: string
+}
+export type StudentExam = {
+  exam_id: string; student_id: string; market: string; tactic: string
+  challenger_model_sha256: string; incumbent_model_sha256: string | null
+  report_sha256: string; challenger: ExamMetrics; incumbent: ExamMetrics
+  challenger_outperformed: boolean; numerical_thresholds_passed: boolean
+  verdict: 'PROVISIONAL_NUMERIC_PASS' | 'PROVISIONAL_NUMERIC_FAIL'
+  qualification: 'unqualified'; research_promotion_allowed: false
+  paper_trading_allowed: false; live_trading_allowed: false; blockers: string[]
+}
+export type StudentExamHistory = {
+  student_id: string; exams: StudentExam[]; qualification: 'unqualified'
+  automatic_promotion_enabled: false; note: string
+}
 export type CEO = { email: string; role: 'ceo'; csrf_token: string }
 export type Dashboard = {
   students_total: number; students_training: number; research_qualified: number; historical_datasets_total: number

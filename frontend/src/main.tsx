@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Activity, ArrowLeft, ArrowRight, BarChart3, BookOpen, Bot, Check, ChevronRight, ClipboardList, Database, GraduationCap, Home, Layers3, LockKeyhole, LogOut, Plus, RefreshCw, ShieldCheck, ShieldOff, Sparkles, UserPlus, Users, X, AlertCircle, Settings2, BookMarked, Search, Target, Clock3, FileUp, FileCheck2 } from 'lucide-react'
 import { api, APIError, MARKETS, SKILLS, setCsrf } from './api'
-import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, PlanInput, Skill, Student, StudentInput, StudentSkillProgress, StudentMemory, StudentTrainingHistory, Tab, TradingMode } from './api'
+import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, PlanInput, Skill, Student, StudentInput, StudentSkillProgress, StudentMemory, StudentTrainingHistory, StudentExamHistory, Tab, TradingMode } from './api'
 import './styles.css'
 
 const NUM_FORMAT = new Intl.NumberFormat('en-GB')
@@ -243,6 +243,31 @@ function ProfileTrainingPane({ student }: { student: Student }) {
         </div>)}</div>}
   </div></section>
 }
+function ProfileExamsPane({ student }: { student: Student }) {
+  const [data, setData] = useState<StudentExamHistory | null>(null)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    let mounted = true
+    setData(null); setError('')
+    void api<StudentExamHistory>(`/v1/students/${student.id}/exams`)
+      .then(value => { if (mounted) setData(value) })
+      .catch(err => { if (mounted) setError(err instanceof Error ? err.message : 'Unable to load examinations') })
+    return () => { mounted = false }
+  }, [student.id])
+  if (error) return <div className="surface empty-panel"><p className="message-error" role="alert">{error}</p></div>
+  if (!data) return <div className="surface empty-panel">Loading examination records…</div>
+  return <section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">ACADEMY / INDEPENDENT EXAMINER</p><h3>Examination reports</h3></div><ClipboardList size={19}/></div>
+    <div className="panel-content"><p className="skills-disclaimer">These are <strong>provisional historical-research comparisons</strong>, not independently qualified profitability. No model promotion, paper or live trading is authorised.</p>
+      {data.exams.length === 0 ? <div className="dataset-empty"><ClipboardList size={19}/><span>No independent historical research examinations recorded yet. Verified market data is still required for qualification.</span></div>
+      : <div className="skill-progress-list">{data.exams.map(exam => <div className="skill-progress-row" key={exam.exam_id}>
+        <div className="skill-progress-head"><strong>{exam.market} · {titleCase(exam.tactic)}</strong><span className="pill pill-amber">{exam.verdict === 'PROVISIONAL_NUMERIC_PASS' ? 'Provisional numeric pass' : 'Numeric fail'}</span></div>
+        <div className="skill-progress-meta"><span>Closed trades: {exam.challenger.closed_trades}</span><span>Net P&amp;L: ${exam.challenger.net_pnl_usd}</span></div>
+        <div className="skill-progress-meta"><span>Profit factor: {exam.challenger.profit_factor ?? 'Undefined'}</span><span>Max drawdown: {(Number(exam.challenger.max_drawdown_fraction) * 100).toFixed(1)}%</span></div>
+        <div className="skill-progress-meta"><span>Compared with {exam.incumbent_model_sha256 ? 'incumbent strategy' : 'cash baseline'}</span><span>Qualification: unqualified</span></div>
+        <small className="muted">Report SHA {exam.report_sha256.slice(0,12)}… · {exam.blockers.length} outstanding safeguards</small>
+      </div>)}</div>}
+    </div></section>
+}
 function StudentProfile({ student, onBack, onEdit }: { student: Student; onBack: () => void; onEdit: () => void }) {
   const [section, setSection] = useState<'overview' | 'skills' | 'memory' | 'training' | 'exams'>('overview')
   const history = student.plan_history ?? [student.learning_plan]
@@ -256,7 +281,7 @@ function StudentProfile({ student, onBack, onEdit }: { student: Student; onBack:
     {section === 'skills' && <ProfileSkillsPane student={student}/>}
     {section === 'memory' && <ProfileMemoryPane student={student}/>}
     {section === 'training' && <ProfileTrainingPane student={student}/>}
-    {section === 'exams' && <div className="surface empty-panel"><EmptyIcon icon={ClipboardList}/><h3>No examinations taken</h3><p>Students must earn qualifications from independent, leakage-checked evidence. No qualifications are granted at enrolment.</p></div>}
+    {section === 'exams' && <ProfileExamsPane student={student}/>}
   </div>
 }
 function Header({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {

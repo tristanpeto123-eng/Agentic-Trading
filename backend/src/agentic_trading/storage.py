@@ -131,3 +131,23 @@ class TrainingCheckpoint(Base):
     development_loss: Mapped[float] = mapped_column(Float, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     __table_args__ = (Index("ix_training_run_epoch", "run_id", "epoch", unique=True),)
+
+
+class ExamRun(Base):
+    """Immutable-by-service experimental exam results; never deployment credentials."""
+    __tablename__ = "exam_runs"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    student_id: Mapped[str] = mapped_column(String(36), ForeignKey("students.id"), nullable=False)
+    training_run_id: Mapped[str] = mapped_column(String(36), ForeignKey("training_runs.id"), nullable=False)
+    plan_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    report_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    report: Mapped[dict] = mapped_column(JSON, nullable=False)
+    dataset_id: Mapped[str] = mapped_column(String(36), ForeignKey("historical_datasets.id"), nullable=False)
+    source_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    challenger_model_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    market: Mapped[str] = mapped_column(String(16), nullable=False)
+    tactic: Mapped[str] = mapped_column(String(32), nullable=False)
+    verdict: Mapped[str] = mapped_column(String(36), nullable=False)
+    qualification: Mapped[str] = mapped_column(String(30), nullable=False, default="unqualified")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    __table_args__ = (Index("ix_exams_student_created", "student_id", "created_at"),)

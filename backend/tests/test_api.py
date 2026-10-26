@@ -5,7 +5,7 @@ from agentic_trading.api import app
 
 def test_health_and_capabilities():
     c = TestClient(app)
-    assert c.get("/health").json()["sprint"] == "S6"
+    assert c.get("/health").json()["sprint"] == "S7"
     caps = c.get("/v1/capabilities").json()
     assert caps["live_trading_enabled"] is False
     assert caps["paper_trading_enabled"] is False

@@ -99,3 +99,7 @@ No neural training workers, broker access or paper/live trading are enabled. The
 ## Sprint 6 — offline neural research (review)
 
 CPU PyTorch neural baseline and restartable/checksum-verified training now live **in code only**; no automatic jobs, model qualifications or broker operations. See [`docs/NEURAL_TRAINING.md`](docs/NEURAL_TRAINING.md), `docs/SPRINT6_CHECK.md` and `scripts/train_student_offline.py`. Training history is visible in Students → selected student → Training; blank until an offline worker has suitable closed research episodes. Synthetic/quarantined data is never evidence of profitability.
+
+## Sprint 7 — Independent Examiner (research prototype)
+
+A deterministic, offline historical Examiner computes challenger-versus-incumbent/cash-baseline results on common M1 bid/ask and costs. The authenticated Student Exams view exposes immutable reports and explicit provenance limitations. See [`docs/INDEPENDENT_EXAMINER.md`](docs/INDEPENDENT_EXAMINER.md). No independently qualified research, broker connectivity, paper or live trading exists. S2 licensing and verified 12-month XAUUSD data remain outstanding.
