@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from './api'
 import type { HistoricalDataset } from './api'
 import { Activity, ArrowLeft, Database, Pause, Play, RefreshCw, ShieldAlert } from 'lucide-react'
