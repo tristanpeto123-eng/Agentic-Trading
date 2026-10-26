@@ -63,6 +63,31 @@ class HistoricalDataset(Base):
     ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class TradeExperience(Base):
+    """Immutable by application contract; database access restricted to trusted workers."""
+    __tablename__ = "trade_experiences"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    student_id: Mapped[str] = mapped_column(String(36), ForeignKey("students.id"), nullable=False)
+    payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    source_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    source_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    origin: Mapped[str] = mapped_column(String(32), nullable=False)
+    partition: Mapped[str] = mapped_column(String(20), nullable=False)
+    instrument: Mapped[str] = mapped_column(String(16), nullable=False)
+    strategy_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    skill_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    closed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    outcome: Mapped[str] = mapped_column(String(8), nullable=False)
+    net_pnl_usd: Mapped[str] = mapped_column(String(64), nullable=False)
+    net_r: Mapped[str] = mapped_column(String(64), nullable=False)
+    __table_args__ = (
+        Index("ix_experience_student_asof", "student_id", "available_at"),
+        Index("ix_experience_student_partition", "student_id", "partition"),
+    )
+
+
 class AuditEvent(Base):
     __tablename__ = "audit_events"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))

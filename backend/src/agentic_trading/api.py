@@ -23,6 +23,7 @@ from agentic_trading.schemas import (
     ChangeDirection, CreateStudent, LearningMode, LoginRequest, RenameStudent,
     StudentResponse, name_key,
 )
+from agentic_trading.skills_memory import catalog_manifest, read_student_memory, student_skill_progress, MemoryError
 from agentic_trading.settings import Settings
 from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, new_session_factory
 
@@ -103,16 +104,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @api.get("/health")
     def health():
-        return {"status": "ok", "component": "api", "sprint": "S2"}
+        return {"status": "ok", "component": "api", "sprint": "S5"}
 
     @api.get("/v1/capabilities")
     def capabilities():
         return {
-            "name": "Agentic Trading", "stage": "sprint_2_data_ingestion",
+            "name": "Agentic Trading", "stage": "sprint_5_skills_memory",
             "research_training_enabled": False, "historical_execution_enabled": False,
             "paper_trading_enabled": False, "live_trading_enabled": False,
             "broker_connected": False, "student_creation_enabled": True,
             "historical_data_import_enabled": True, "research_data_qualified": False,
+            "skills_catalog_enabled": True, "episodic_memory_read_enabled": True,
+            "independent_skill_mastery_enabled": False, "automatic_memory_ingest_enabled": False,
         }
 
     @api.post("/v1/auth/login")
@@ -228,6 +231,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {"dataset_id": row.id, "as_of": now, "research_eligible": False,
                 "m15": [x.as_dict() for x in eligible[-16:]], "h1": h1[-8:], "h4": h4[-4:],
                 "note": "Only completed candles are visible. This quarantined dataset cannot qualify research."}
+
+    @api.get("/v1/skills/catalog")
+    def skill_catalog(_: tuple[CEO, dict] = Depends(current_ceo)):
+        return catalog_manifest()
+
+    @api.get("/v1/students/{student_id}/skills")
+    def skills_progress(student_id: str, _: tuple[CEO, dict] = Depends(current_ceo),
+                        session: Session = Depends(db)):
+        student = get_student_or_404(student_id, session)
+        try:
+            return student_skill_progress(session, student)
+        except MemoryError as exc:
+            raise HTTPException(status_code=409, detail=f"Memory integrity check failed: {exc}") from exc
+
+    @api.get("/v1/students/{student_id}/memory")
+    def student_memory(student_id: str, limit: int = 50, _: tuple[CEO, dict] = Depends(current_ceo),
+                       session: Session = Depends(db)):
+        get_student_or_404(student_id, session)
+        if not 1 <= limit <= 100:
+            raise HTTPException(status_code=422, detail="limit must be between 1 and 100")
+        try:
+            return {"student_id": student_id, "episodes": read_student_memory(session, student_id, limit=limit),
+                    "qualification": "unqualified", "note": "Research archive only; not independent mastery or profitability evidence."}
+        except (MemoryError, ValueError) as exc:
+            raise HTTPException(status_code=409, detail=f"Memory integrity check failed: {exc}") from exc
 
     @api.get("/v1/students", response_model=list[StudentResponse])
     def students(_: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):
