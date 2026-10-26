@@ -27,6 +27,7 @@ from agentic_trading.skills_memory import catalog_manifest, read_student_memory,
 from agentic_trading.neural_training import student_training_runs, TrainingError
 from agentic_trading.examiner import student_exam_history, ExaminationError
 from agentic_trading.academy import lesson_plan, student_jobs, AcademyError
+from agentic_trading.evolution import student_evolution, peer_lessons, mentorship_eligibility, EvolutionError
 from agentic_trading.settings import Settings
 from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, new_session_factory
 
@@ -107,12 +108,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @api.get("/health")
     def health():
-        return {"status": "ok", "component": "api", "sprint": "S8"}
+        return {"status": "ok", "component": "api", "sprint": "S9"}
 
     @api.get("/v1/capabilities")
     def capabilities():
         return {
-            "name": "Agentic Trading", "stage": "sprint_8_academy",
+            "name": "Agentic Trading", "stage": "sprint_9_evolution",
             "research_training_enabled": False, "historical_execution_enabled": False,
             "paper_trading_enabled": False, "live_trading_enabled": False,
             "broker_connected": False, "student_creation_enabled": True,
@@ -121,7 +122,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "independent_skill_mastery_enabled": False, "automatic_memory_ingest_enabled": False,
             "offline_neural_research_training_available": True, "automatic_training_enabled": False,
             "independent_examiner_enabled": False,
-            "offline_research_examiner_available": True, "academy_scheduler_available": True, "independent_examination_qualification_enabled": False,
+            "offline_research_examiner_available": True, "academy_scheduler_available": True, "strategy_dna_read_enabled": True, "peer_research_lessons_enabled": True, "independent_examination_qualification_enabled": False,
         }
 
     @api.post("/v1/auth/login")
@@ -300,6 +301,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "qualification": "unqualified",
                     "note": "Bounded offline research jobs only. Verified market data is unavailable."}
         except AcademyError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    @api.get("/v1/students/{student_id}/evolution")
+    def evolution_status(student_id: str, _: tuple[CEO, dict] = Depends(current_ceo),
+                         session: Session = Depends(db)):
+        try:
+            return {"tree": student_evolution(session, student_id),
+                    "lessons": peer_lessons(session, student_id),
+                    "mentor_status": mentorship_eligibility(session, student_id, 'tactic:trend'),
+                    "qualification": "unqualified", "automatic_promotion": False}
+        except EvolutionError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @api.get("/v1/students", response_model=list[StudentResponse])

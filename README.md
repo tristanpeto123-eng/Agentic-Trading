@@ -107,3 +107,7 @@ A deterministic, offline historical Examiner computes challenger-versus-incumben
 ## Sprint 8 research Academy
 
 The **offline Academy scheduler** uses bounded, durable idempotent lessons and jobs. Because no verified XAUUSD source exists, normal jobs remain blocked; fixture-only tests never grant research qualification or trading authority. See `docs/ACADEMY.md` and `docs/SPRINT8_CHECK.md`.
+
+## Sprint 9 strategy evolution
+
+Research Strategy DNA and peer lessons are now versioned and tamper-checked. No candidate gains trading qualification or permission by inheritance. See `docs/EVOLUTION.md`.

@@ -168,3 +168,30 @@ class AcademyJob(Base):
     result: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     __table_args__ = (Index('ix_academy_student_state', 'student_id', 'state'),)
+
+
+class StrategyRevision(Base):
+    """Versioned strategy genealogy; no research/live promotion state."""
+    __tablename__ = 'strategy_revisions'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    student_id: Mapped[str] = mapped_column(String(36), ForeignKey('students.id'), nullable=False)
+    family: Mapped[str] = mapped_column(String(60), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    market: Mapped[str] = mapped_column(String(16), nullable=False)
+    tactic: Mapped[str] = mapped_column(String(32), nullable=False)
+    parent_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    payload_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    __table_args__=(Index('ix_strategy_family_version','student_id','family','version',unique=True),)
+
+
+class PeerLesson(Base):
+    """Research-only interstudent teaching reference, no credential transfer."""
+    __tablename__='peer_lessons'
+    id: Mapped[str] = mapped_column(String(36),primary_key=True)
+    source_student_id: Mapped[str] = mapped_column(String(36),ForeignKey('students.id'),nullable=False)
+    target_student_id: Mapped[str] = mapped_column(String(36),ForeignKey('students.id'),nullable=False)
+    payload: Mapped[dict] = mapped_column(JSON,nullable=False)
+    payload_sha256: Mapped[str] = mapped_column(String(64),unique=True,nullable=False)
+    __table_args__=(Index('ix_peer_target','target_student_id'),)
