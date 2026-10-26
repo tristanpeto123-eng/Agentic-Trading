@@ -51,6 +51,7 @@ jobs:
       - name: Install app and browser runner
         run: |
           python -m pip install -e './backend[dev]'
+          python -m pip install 'numpy>=1.26,<3'
           cd frontend && npm install --no-audit --no-fund
           npx playwright install --with-deps chromium
       - name: Seed ephemeral CEO and start local application
