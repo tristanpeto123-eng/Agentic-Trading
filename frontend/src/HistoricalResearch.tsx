@@ -160,7 +160,7 @@ export function HistoricalResearch() {
           </button>
         </div>
       </> : <div className="dataset-empty">No completed candles are available for this dataset.</div>}</>}
-      <p className="historical-warning">No simulated orders, trades, win rate or equity curves are generated here. The independent M1 bid/ask replay engine remains separate and offline; paper/live execution stays locked.</p>
+      <p className="historical-warning">No simulated orders, trades, win rate or equity curves are generated from saved M15 candles in this section. The synthetic M1 engine demo above is separate; paper/live execution stays locked.</p>
     </div>
   </section>
 }
