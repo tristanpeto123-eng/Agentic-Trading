@@ -6,7 +6,8 @@ test.beforeAll(() => mkdirSync('screenshots', { recursive: true }))
 const email = 'ci@example.invalid'
 const password = process.env.CEO_TEST_PASSWORD
 
-test('mobile CEO login, student lifecycle, and disabled trading', async ({ page }) => {
+test('mobile CEO login, student lifecycle, and disabled trading', async ({ page }, testInfo) => {
+  const studentName = `Orion CI ${testInfo.retry}`
   if (!password) throw new Error('CEO_TEST_PASSWORD required for e2e')
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible()
@@ -22,12 +23,12 @@ test('mobile CEO login, student lifecycle, and disabled trading', async ({ page 
   await expect(page.getByRole('heading', { name: 'Students', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Create student', exact: true }).click()
   const dialog = page.getByRole('dialog')
-  await dialog.getByLabel('Student name').fill('Orion')
+  await dialog.getByLabel('Student name').fill(studentName)
   await dialog.getByRole('button', { name: /CEO-directed/ }).click()
   await dialog.getByRole('button', { name: /Gold.*Commodities/ }).click()
   await dialog.getByRole('button', { name: /Trend trading/ }).click()
   await dialog.getByRole('button', { name: 'Create student' }).click()
-  await expect(page.getByRole('heading', { name: 'Orion' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: studentName })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Learning plan v1' })).toBeVisible()
   await page.screenshot({ path: 'screenshots/02-student-mobile.png', fullPage: true })
   await page.getByRole('tab', { name: 'Skills' }).click()
@@ -47,15 +48,16 @@ test('mobile CEO login, student lifecycle, and disabled trading', async ({ page 
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible()
   await nav.getByRole('button', { name: 'Students' }).click()
-  await page.locator('button.student-card').filter({ hasText: 'Orion' }).click()
+  await page.locator('button.student-card').filter({ hasText: studentName }).click()
   await expect(page.getByRole('heading', { name: 'Learning plan v2' })).toBeVisible()
   await expect(page.getByText('Learning plan v1')).toBeVisible()
 
   await nav.getByRole('button', { name: 'Trading' }).click()
   await expect(page.getByRole('heading', { name: 'Trading', exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Historical testing not yet available' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Offline research only' })).toBeVisible()
   await page.getByRole('tab', { name: /Paper/ }).click()
   await expect(page.getByRole('heading', { name: 'Paper trading is disabled' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Paper pilot readiness' })).toBeVisible()
   await page.getByRole('tab', { name: /Live/ }).click()
   await expect(page.getByRole('heading', { name: 'Live trading is disabled' })).toBeVisible()
   await page.screenshot({ path: 'screenshots/03-trading-mobile.png', fullPage: true })
