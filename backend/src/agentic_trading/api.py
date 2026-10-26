@@ -5,6 +5,7 @@ from collections import defaultdict, deque
 from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
+import os
 import time
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
@@ -119,7 +120,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "research_training_enabled": False, "historical_execution_enabled": False,
             "paper_trading_enabled": False, "live_trading_enabled": False,
             "broker_connected": False, "student_creation_enabled": True,
-            "historical_data_import_enabled": True, "research_data_qualified": False,
+            "historical_data_import_enabled": os.environ.get("PREVIEW_DISABLE_IMPORTS", "") != "1", "research_data_qualified": False,
             "skills_catalog_enabled": True, "episodic_memory_read_enabled": True,
             "independent_skill_mastery_enabled": False, "automatic_memory_ingest_enabled": False,
             "offline_neural_research_training_available": True, "automatic_training_enabled": False,
@@ -180,6 +181,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @api.post("/v1/datasets/import", status_code=201)
     def import_dataset(payload: DatasetImport, user: CEO = Depends(require_csrf), session: Session = Depends(db)):
+        if os.environ.get("PREVIEW_DISABLE_IMPORTS", "") == "1":
+            raise HTTPException(status_code=503, detail="Dataset import is disabled on this ephemeral preview; connect persistent storage before importing.")
         content = payload.csv_content.encode("utf-8")
         digest = sha256(content).hexdigest()
         manifest = payload.source.model_dump(mode="json")
