@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 import os
 from pathlib import Path
+from agentic_trading.database_url import normalize_database_url
 
 
 @dataclass(frozen=True)
@@ -33,4 +34,4 @@ class Settings:
             secret = os.urandom(32).hex()
         database = os.getenv("DATABASE_URL") or f"sqlite:///{Path.cwd() / 'agentic_local.sqlite3'}"
         origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
-        return cls(database, secret, env, os.getenv("DATA_STORAGE_DIR", ""), tuple(s.strip().rstrip("/") for s in origins.split(",") if s.strip()))
+        return cls(normalize_database_url(database), secret, env, os.getenv("DATA_STORAGE_DIR", ""), tuple(s.strip().rstrip("/") for s in origins.split(",") if s.strip()))

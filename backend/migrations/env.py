@@ -4,11 +4,12 @@ import os
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 from agentic_trading.storage import Base
+from agentic_trading.database_url import normalize_database_url
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
-config.set_main_option("sqlalchemy.url", (os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")).replace("%", "%%"))
+config.set_main_option("sqlalchemy.url", normalize_database_url(os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")).replace("%", "%%"))
 target_metadata = Base.metadata
 
 
