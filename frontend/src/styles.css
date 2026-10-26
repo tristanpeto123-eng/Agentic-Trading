@@ -61,3 +61,23 @@
  .historical-figures strong{font-size:11px}
  .historical-actions button{flex:1}
 }
+
+/* Research-only historical engine and phone-local CSV controls. */
+.demo-chart-stack{display:grid;grid-template-columns:1fr;gap:12px;min-width:0}
+.demo-chart{width:100%;height:auto;display:block;max-height:330px}
+.demo-figures{grid-template-columns:repeat(5,minmax(0,1fr))}
+.demo-figures strong{font-size:clamp(12px,1.25vw,18px)}
+.demo-speed{display:flex;align-items:center;gap:8px;color:#b2c6d5;font-size:12px;margin-left:auto}
+.demo-speed select,.browser-file-label input{color:#e7f0f5;background:#0c1724;border:1px solid #3e5264;border-radius:8px;padding:10px;font-size:13px}
+.browser-file-label input{width:100%;min-width:0}
+.demo-trade-list{display:grid;gap:9px;padding:13px;border:1px solid #263b50;border-radius:10px;background:#0c1724}
+.demo-trade-list h4{margin:0 0 4px;display:flex;align-items:center;gap:8px;font-size:13px}
+.demo-trade-row{display:flex;justify-content:space-between;gap:15px;border-top:1px solid #263b50;padding:8px 0;font-size:12px}
+.demo-trade-row strong{font-variant-numeric:tabular-nums}
+.historical-demo-lab .historical-warning{display:flex;align-items:flex-start;gap:7px}
+@media(max-width:620px){
+  .demo-figures{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .demo-figures strong{font-size:12px}
+  .demo-speed{margin-left:0}
+  .demo-chart{max-height:none}
+}
