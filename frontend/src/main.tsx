@@ -4,6 +4,8 @@ import { Activity, ArrowLeft, ArrowRight, BarChart3, BookOpen, Bot, Check, Chevr
 import { api, APIError, MARKETS, SKILLS, setCsrf } from './api'
 import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, PlanInput, Skill, Student, StudentInput, StudentSkillProgress, StudentMemory, StudentTrainingHistory, StudentExamHistory, AcademyState, EvolutionState, SentinelState, PaperReadiness, Tab, TradingMode } from './api'
 import { HistoricalResearch } from './HistoricalResearch'
+import { HistoricalDemoLab } from './HistoricalDemoLab'
+import { BrowserCsvReplay } from './BrowserCsvReplay'
 import './styles.css'
 
 const NUM_FORMAT = new Intl.NumberFormat('en-GB')
@@ -437,7 +439,7 @@ function TradingPage() {
     live: { heading: 'Live trading is disabled', intro: 'Real-money trading remains outside this programme until separate readiness checks and exact CEO approval.', next: 'Not scheduled in current sprints' },
   }
   return <div className="page-enter">
-    <Header title="Trading" description="Historical research replay is available. Paper and live trading remain safely locked."/>
+    <Header title="Trading" description="Try the synthetic simulator or replay your own M15 candles locally. Paper and live remain locked."/>
     <div className="trading-switch" role="tablist" aria-label="Trading environment">
       {(['historical','paper','live'] as const).map(m => <button key={m} role="tab"
         aria-selected={scope === m} className={scope === m ? 'active' : ''} onClick={() => setScope(m)}>
@@ -445,6 +447,8 @@ function TradingPage() {
       </button>)}
     </div>
     {scope === 'historical' ? <>
+      <HistoricalDemoLab/>
+      <BrowserCsvReplay/>
       <HistoricalResearch/>
       <DataEnginePanel/>
     </> : <>
