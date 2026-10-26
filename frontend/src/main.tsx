@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { Activity, ArrowLeft, ArrowRight, BarChart3, BookOpen, Bot, Check, ChevronRight, ClipboardList, Database, GraduationCap, Home, Layers3, LockKeyhole, LogOut, Plus, RefreshCw, ShieldCheck, ShieldOff, Sparkles, UserPlus, Users, X, AlertCircle, Settings2, BookMarked, Search, Target, Clock3, FileUp, FileCheck2, GitBranch, ShieldAlert } from 'lucide-react'
 import { api, APIError, MARKETS, SKILLS, setCsrf } from './api'
 import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, PlanInput, Skill, Student, StudentInput, StudentSkillProgress, StudentMemory, StudentTrainingHistory, StudentExamHistory, AcademyState, EvolutionState, SentinelState, PaperReadiness, Tab, TradingMode } from './api'
+import { HistoricalResearch } from './HistoricalResearch'
 import './styles.css'
 
 const NUM_FORMAT = new Intl.NumberFormat('en-GB')
@@ -315,6 +316,7 @@ function Header({ title, description, action }: { title: string; description: st
 function DataEnginePanel() {
   const [datasets, setDatasets] = useState<HistoricalDataset[]>([])
   const [showImport, setShowImport] = useState(false)
+  const [importAvailable, setImportAvailable] = useState<boolean | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [provider, setProvider] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
@@ -329,6 +331,8 @@ function DataEnginePanel() {
     catch (err) { setError(err instanceof Error ? err.message : 'Unable to load dataset records') }
   }, [])
   useEffect(() => { void load() }, [load])
+  useEffect(() => { void api<{ historical_data_import_enabled: boolean }>('/v1/capabilities')
+    .then(c => setImportAvailable(c.historical_data_import_enabled)).catch(() => setImportAvailable(false)) }, [])
   const importData = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!selectedFile) { setError('Select an M15 CSV file'); return }
@@ -348,8 +352,9 @@ function DataEnginePanel() {
     finally { setBusy(false) }
   }
   return <section className="surface panel data-engine-panel" aria-label="Historical data engine">
-    <div className="panel-heading"><div><p className="eyebrow">HISTORICAL DATA · SPRINT 02</p><h3>Data Engine</h3></div><button className="btn btn-secondary" onClick={() => setShowImport(!showImport)}><FileUp size={16}/>{showImport ? 'Close' : 'Import CSV'}</button></div>
+    <div className="panel-heading"><div><p className="eyebrow">HISTORICAL DATA · SPRINT 02</p><h3>Data Engine</h3></div><button className="btn btn-secondary" disabled={importAvailable === false} onClick={() => setShowImport(!showImport)}><FileUp size={16}/>{showImport ? 'Close' : 'Import CSV'}</button></div>
     <div className="data-engine-content">
+      {importAvailable === false && <p className="message-error">Import requires your persistent PostgreSQL connection. Check the Render DATABASE_URL environment variable; your existing students are not affected.</p>}
       <p className="data-explainer">Import genuine XAUUSD M15 exports with source details. Every imported dataset is frozen, checked and <strong>quarantined</strong> until its provenance and usage rights are independently verified. No training or trading is enabled.</p>
       {notice && <p className="data-notice" role="status"><FileCheck2 size={15}/>{notice}</p>}
       {error && <p className="message-error" role="alert"><AlertCircle size={16}/>{error}</p>}
@@ -427,18 +432,39 @@ function PaperReadinessPanel() {
 }
 function TradingPage() {
   const [scope, setScope] = useState<TradingMode>('historical')
-  const details: Record<TradingMode, { heading: string; intro: string; next: string }> = {
-    historical: { heading: 'Offline research only', intro: 'Historical simulator research exists, but verified market data and independent qualification are still unavailable.', next: 'Independent source verification required' },
+  const details = {
     paper: { heading: 'Paper trading is disabled', intro: 'Pilot readiness has been evaluated, but independent data verification and CEO activation are still required.', next: 'Review the pre-flight blockers below' },
-    live: { heading: 'Live trading is disabled', intro: 'Real-money trading remains completely outside this programme until separate readiness checks and exact CEO approval.', next: 'Not scheduled in current sprints' },
+    live: { heading: 'Live trading is disabled', intro: 'Real-money trading remains outside this programme until separate readiness checks and exact CEO approval.', next: 'Not scheduled in current sprints' },
   }
-  return <div className="page-enter"><Header title="Trading" description="Historical, paper and live are completely separate. No artificial balances or trading activity."/>
-    <div className="trading-switch" role="tablist" aria-label="Trading environment">{(['historical','paper','live'] as const).map(m => <button key={m} role="tab" aria-selected={scope === m} className={scope === m ? 'active' : ''} onClick={() => setScope(m)}>{titleCase(m)} <span className="mode-disabled">OFFLINE</span></button>)}</div>
-    <div className="surface trading-placeholder"><div className="trading-disabled-icon"><ShieldOff size={29}/></div><span className="pill pill-muted">{scope.toUpperCase()} · NOT ENABLED</span><h2>{details[scope].heading}</h2><p>{details[scope].intro}</p><div className="coming-next"><Clock3 size={16}/>{details[scope].next}</div></div>
-    <div className="trading-bottom"><div className="surface small-status"><div className="small-status-top"><BarChart3 size={18}/><span>Equity &amp; net P&amp;L</span></div><strong>Not available</strong><small>No results have been generated</small></div><div className="surface small-status"><div className="small-status-top"><ClipboardList size={18}/><span>Trade journal</span></div><strong>Empty</strong><small>Independent journal comes with the simulator</small></div><div className="surface small-status"><div className="small-status-top"><ShieldCheck size={18}/><span>CEO permissions</span></div><strong>None granted</strong><small>No trading model deployed</small></div></div>
-    {scope === 'paper' && <PaperReadinessPanel/>}
+  return <div className="page-enter">
+    <Header title="Trading" description="Historical research replay is available. Paper and live trading remain safely locked."/>
+    <div className="trading-switch" role="tablist" aria-label="Trading environment">
+      {(['historical','paper','live'] as const).map(m => <button key={m} role="tab"
+        aria-selected={scope === m} className={scope === m ? 'active' : ''} onClick={() => setScope(m)}>
+        {titleCase(m)} <span className="mode-disabled">{m === 'historical' ? 'REPLAY' : 'LOCKED'}</span>
+      </button>)}
+    </div>
+    {scope === 'historical' ? <>
+      <HistoricalResearch/>
+      <DataEnginePanel/>
+    </> : <>
+      <div className="surface trading-placeholder">
+        <div className="trading-disabled-icon"><ShieldOff size={29}/></div>
+        <span className="pill pill-muted">{scope.toUpperCase()} · NOT ENABLED</span>
+        <h2>{details[scope].heading}</h2>
+        <p>{details[scope].intro}</p>
+        <div className="coming-next"><Clock3 size={16}/>{details[scope].next}</div>
+      </div>
+      <div className="trading-bottom">
+        <div className="surface small-status"><div className="small-status-top"><BarChart3 size={18}/><span>Equity &amp; net P&amp;L</span></div><strong>Not available</strong><small>No qualified financial results</small></div>
+        <div className="surface small-status"><div className="small-status-top"><ClipboardList size={18}/><span>Trade journal</span></div><strong>Empty</strong><small>No operational trading activity</small></div>
+        <div className="surface small-status"><div className="small-status-top"><ShieldCheck size={18}/><span>CEO permissions</span></div><strong>None granted</strong><small>No trading model deployed</small></div>
+      </div>
+      {scope === 'paper' && <PaperReadinessPanel/>}
+    </>}
   </div>
 }
+
 function App() {
   const [ceo, setCeo] = useState<CEO | null>(null)
   const [initialising, setInitialising] = useState(true)

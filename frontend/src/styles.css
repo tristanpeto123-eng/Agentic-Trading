@@ -27,3 +27,37 @@
 .training-graph svg{width:100%;height:150px;display:block}
 .training-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:#bacbd8;margin-top:6px}
 .training-legend span:first-child{color:#58bfd3}.training-legend span:last-child{color:#e0b270}
+
+
+/* Sprint 12 · historical research cockpit: responsive and explicitly non-execution. */
+.historical-replay{margin-bottom:20px}
+.historical-body{padding:20px 22px;display:grid;gap:16px}
+.historical-body .skills-disclaimer{margin:0}
+.historical-body .skills-disclaimer strong{color:#d8e6f1}
+.historical-toolbar{display:flex;gap:12px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+.historical-toolbar label{font-size:11px;font-weight:750;display:grid;gap:8px;color:#acc0d0;flex:1;min-width:190px}
+.historical-toolbar select{width:100%;color:#e7f0f5;background:#0c1724;border:1px solid #3e5264;border-radius:8px;padding:11px;font-size:13px}
+.historical-toolbar button{white-space:nowrap}
+.historical-meta{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:11px;color:#a4b8c9}
+.historical-meta strong{color:#e1edf5}
+.historical-meta span{display:inline-flex;gap:6px;align-items:center}
+.historical-meta span:last-child{color:#f1cf96}
+.historical-candle-chart{width:100%;height:auto;display:block;max-height:425px}
+.historical-figures{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.historical-figures>div{display:grid;gap:5px;background:#0c1a2a;border:1px solid #2a4054;border-radius:8px;padding:13px 10px;min-width:0}
+.historical-figures span{font-size:10px;color:#8caabe}
+.historical-figures strong{font-size:13px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.historical-scrubber{display:grid;gap:9px;font-size:11px;color:#c2d2de}
+.historical-scrubber input{width:100%;accent-color:#69bcd1}
+.historical-actions{display:flex;gap:10px;flex-wrap:wrap}
+.historical-actions .btn{font-size:11px}
+.historical-warning{font-size:11px;line-height:1.6;color:#d1b78c;border:1px solid #514536;padding:13px;border-radius:8px;background:#282219}
+@media(max-width:620px){
+ .historical-body{padding:15px;gap:13px}
+ .historical-toolbar{align-items:stretch}
+ .historical-toolbar select,.historical-toolbar button{width:100%}
+ .historical-figures{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .historical-figures>div{padding:10px 8px}
+ .historical-figures strong{font-size:11px}
+ .historical-actions button{flex:1}
+}

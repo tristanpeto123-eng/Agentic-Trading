@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Integer, String, create_engine
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Integer, LargeBinary, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
 
@@ -61,6 +61,23 @@ class HistoricalDataset(Base):
     canonical_path: Mapped[str] = mapped_column(String(300), nullable=False)
     state: Mapped[str] = mapped_column(String(40), default="quarantined", nullable=False)
     ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+
+class HistoricalDatasetArtifact(Base):
+    """Integrity-checked source and canonical candle bytes.
+
+    The free Render web container has no durable disk. Store both immutable
+    byte strings in the same PostgreSQL transaction as dataset metadata.
+    Database size is bounded by the S2 source and row limits. No licence or
+    training qualification is inferred by this storage.
+    """
+    __tablename__ = "historical_dataset_artifacts"
+    dataset_id: Mapped[str] = mapped_column(String(36), ForeignKey("historical_datasets.id"), primary_key=True)
+    raw_csv: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    canonical_jsonl: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
 
 
 class TradeExperience(Base):

@@ -13,6 +13,8 @@ from sqlalchemy.orm import Session
 from agentic_trading.academy import _digest
 from agentic_trading.evolution import _verify_revision, EvolutionError
 from agentic_trading.skills_memory import _safe_episode, MemoryError
+from agentic_trading.historical_store import DATABASE_ARTIFACT_PATH, source_bytes
+from agentic_trading.data_engine import DataQualityError
 from agentic_trading.storage import (AcademyJob, HistoricalDataset, TradeExperience,
     TrainingRun, TrainingCheckpoint, ExamRun, StrategyRevision, PeerLesson, SafetyLatch)
 
@@ -61,14 +63,20 @@ def scan_health(session: Session, *, data_root: Path, checkpoints_root: Path,
     for dataset in read(HistoricalDataset,'datasets'):
         if dataset.state!='quarantined':
             findings.append({'area':'data','severity':'block','reason':'unsupported_verified_state'})
-        for field,digest_field in [('raw_path','source_hash'),('canonical_path','canonical_hash')]:
-            candidate=(root/getattr(dataset,field)).resolve()
-            if not candidate.is_relative_to(root):
-                findings.append({'area':'data','severity':'block','reason':'path_escape'})
-            elif not candidate.is_file():
-                findings.append({'area':'data','severity':'block','reason':'missing_source_artifact'})
-            elif sha256(candidate.read_bytes()).hexdigest()!=getattr(dataset,digest_field):
-                findings.append({'area':'data','severity':'block','reason':'source_checksum_mismatch'})
+        if dataset.raw_path == DATABASE_ARTIFACT_PATH:
+            try:
+                source_bytes(session, dataset, root)
+            except (DataQualityError, OSError, ValueError):
+                findings.append({'area':'data','severity':'block','reason':'historical_artifact_integrity'})
+        else:
+            for field,digest_field in [('raw_path','source_hash'),('canonical_path','canonical_hash')]:
+                candidate=(root/getattr(dataset,field)).resolve()
+                if not candidate.is_relative_to(root):
+                    findings.append({'area':'data','severity':'block','reason':'path_escape'})
+                elif not candidate.is_file():
+                    findings.append({'area':'data','severity':'block','reason':'missing_source_artifact'})
+                elif sha256(candidate.read_bytes()).hexdigest()!=getattr(dataset,digest_field):
+                    findings.append({'area':'data','severity':'block','reason':'source_checksum_mismatch'})
     for episode in read(TradeExperience,'episodes'):
         try: _safe_episode(episode)
         except (MemoryError, ValueError):
