@@ -9,6 +9,7 @@ class Settings:
     database_url: str
     secret_key: str
     environment: str = "development"
+    data_dir: str = ""
     allowed_origins: tuple[str, ...] = ("http://localhost:5173", "http://127.0.0.1:5173")
 
     def __post_init__(self):
@@ -32,4 +33,4 @@ class Settings:
             secret = os.urandom(32).hex()
         database = os.getenv("DATABASE_URL") or f"sqlite:///{Path.cwd() / 'agentic_local.sqlite3'}"
         origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
-        return cls(database, secret, env, tuple(s.strip().rstrip("/") for s in origins.split(",") if s.strip()))
+        return cls(database, secret, env, os.getenv("DATA_STORAGE_DIR", ""), tuple(s.strip().rstrip("/") for s in origins.split(",") if s.strip()))

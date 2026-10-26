@@ -5,8 +5,8 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 | Sprint | Deliverable | Status |
 |---|---|---|
 | S0 | Repo skeleton, contracts, policy tests, docs, provider shortlist, UX wireframes | **Completed — published, verified in GitHub** |
-| S1 | Login, CEO role, student creation, persistent plans, main shell | **Verified development foundation — PR review pending, not deployed** |
-| S2 | Verified XAUUSD Data Engine | Not started |
+| S1 | Login, CEO role, student creation, persistent plans, main shell | **Completed — CEO approved, merged into main** |
+| S2 | XAUUSD historical data ingestion, quality & time-safe context | **Implementation in review; provider/rights gate pending** |
 | S3 | Historical execution simulator | Not started |
 | S4 | Scout A/B, Strategist B, Guardian A | Not started |
 | S5 | Skill/memory engine | Not started |
@@ -37,3 +37,13 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 **Check:** Verify login denial/role, CSRF, name conflicts and restarts, directed plan history, rename preserving UUID, migration idempotency, no execution endpoints, mobile layout and CI build. Evidence is in `docs/SPRINT1_CHECK.md`.
 
 **Act:** Only after Checker acceptance, implement S2 verified market data and its provenance. Design decisions about hosted database/backups, production auth throttling and queue remain gated before public deployment.
+
+## Sprint 2 — PDCA
+
+**Plan:** Freeze real XAUUSD M15 CSV source content, log price basis/rights/provenance, detect malformed/gapped data, derive only completed H1/H4 and keep unverified sources quarantined.
+
+**Do:** CEO-only import/list/context routes, SQLAlchemy/Alembic dataset metadata, SHA-256-addressed storage, quality reports and Home import UI.
+
+**Check:** Full pytest suite, migration, checksum integrity, origin/CSRF, UTC and as-of leaks, no execution endpoints; CI frontend build and browser test. See `docs/SPRINT2_CHECK.md`.
+
+**Act:** Get genuinely licensed real provider export and verify coverage and rights before marking provider gate complete or proceeding to production replay. Synthetic input is never accepted as qualified evidence.

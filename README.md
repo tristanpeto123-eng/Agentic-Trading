@@ -1,10 +1,10 @@
 # Agentic Trading
 
-Independent, research-first academy for named AI trading students. **Sprint 1 implements CEO login, mobile-first Home / Students / Trading UI, unique student creation and persistent versioned learning plans.** There is no market-data pipeline, ML training, broker connection, actual or simulated order execution, financial performance data, or qualification engine yet.
+Independent, research-first academy for named AI trading students. **Sprint 1 is merged. Sprint 2 adds research-only XAUUSD M15 CSV import, immutable raw/normalized files, structural quality reports, historical context queries and an import panel under Home.** No real provider has been connected or approved; all imports remain quarantined. There is no ML training, broker connection, order execution, financial performance data, or qualification engine yet.
 
 **The GitHub repository is public by the owner's choice. Source code is public; the CEO interface is password-protected and is not deployed. Never commit credentials, account data, student private histories or market-data purchases.**
 
-## Sprint 1 — run locally
+## Sprint 2 — run locally
 
 Requires Python 3.11+ and Node.js 20+. Use two terminals.
 
@@ -14,7 +14,9 @@ source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
 pip install -e './backend[dev]'
 
 # Set DATABASE_URL and SESSION_SECRET for the current shell (or use dev defaults).
-alembic -c backend/alembic.ini upgrade head
+cd backend
+alembic -c alembic.ini upgrade head
+cd ..
 
 # First-time only; enter a 12+ character CEO password interactively (not in code or CLI args).
 python -m agentic_trading.bootstrap_ceo --email you@example.com
@@ -29,7 +31,7 @@ npm install
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173** in your browser and log in using the CEO credentials you created. The backend is reached through the Vite proxy so the HttpOnly signed cookie stays same-origin. Database URL defaults to a local SQLite file **relative to the process working directory**. The commands above all run from the repository root. For hosted deployments, configure an absolute database URL consistently for migration, bootstrap and API startup.
+Open **http://127.0.0.1:5173** in your browser and log in using the CEO credentials you created. The backend is reached through the Vite proxy so the HttpOnly signed cookie stays same-origin. Database URL defaults to a local SQLite file, **relative to the process working directory**; run migrations, bootstrap and API using the same directory or set an absolute `DATABASE_URL`.
 
 Run checks:
 
@@ -40,7 +42,7 @@ cd frontend && npm run build
 
 `pip install -e './backend[dev,postgres]'` includes PostgreSQL driver; use `DATABASE_URL=postgresql+psycopg://...` and run Alembic migrations before deploying. Production also requires HTTPS, fixed `SESSION_SECRET`, approved origins, multi-worker throttling, backups, operational monitoring and security review. **Don't put this dev server on the public internet.**
 
-## Sprint 1 functionality
+## Sprint 1 and 2 functionality
 
 - CEO account bootstrap, Argon2-hashed password, signed eight-hour HttpOnly session, server-verified CEO role, CSRF protection for writes, basic rate limiting and origin checks.
 - Students with UUID identity, normalized/case-insensitive unique names and persistent enrollments.
@@ -49,6 +51,12 @@ cd frontend && npm run build
 - Mobile-first console with working login, student creation, student profile, change direction, Home summary and three explicitly segregated disabled Trading modes.
 - Alembic initial database migration (SQLite dev and PostgreSQL schema), automated API/permission/persistence/migration tests and CI frontend TypeScript build.
 
+## Sprint 2 data pipeline
+
+Home → Data Engine → Import CSV accepts 12 MiB maximum of UTC M15 XAUUSD candles (up to 80,000). Record a real provider HTTPS URL, extraction reference, usage-rights reference and price basis. The server saves immutable SHA-256-labelled raw CSV and normalized JSONL outside Git, detects input errors and data gaps, and serves completed-only H1/H4 context for a historical `as_of` time. **Source authenticity and legal permissions are not automatically established: all imports are quarantined and prohibited from qualification.**
+
+To keep source files on persistent private storage, set `DATA_STORAGE_DIR` in `.env`/shell. `data_store/` is the default if unset. Read [Data Import Guide](docs/DATA_IMPORT.md) and [Sprint 2 Review](docs/SPRINT2_CHECK.md).
+
 ## Safety and architecture
 
 Every new student is **unqualified**, **not training**, **not trading**. Learning targets are not earned skills; research grading and student promotion remain future work. No trading modes can be enabled through this API. The existing [governance policy](docs/PRODUCT_SPEC_v1.0.md) remains locked.
@@ -56,3 +64,11 @@ Every new student is **unqualified**, **not training**, **not trading**. Learnin
 [Product specification](docs/PRODUCT_SPEC_v1.0.md) · [Sprint tracker](docs/SPRINTS.md) · [Security](docs/SECURITY.md) · [Sprint 1 verification](docs/SPRINT1_CHECK.md).
 
 Entirely independent of Scalp City: no shared imports, datasets, credentials, models or repository dependencies.
+
+### Dukascopy research data adapter (Sprint 2 follow-up)
+
+The optional `scripts/fetch_dukascopy_xauusd.py` script downloads or offline-processes
+provider M1 BID/ASK archives into separated M15 CSVs with per-file SHA-256
+provenance. Downloading requires `--download` and valid permitted access; it
+is not enabled by default. **No real provider export or licence has been validated**;
+all imported CSV files remain quarantined. See `docs/DATA_IMPORT.md`.

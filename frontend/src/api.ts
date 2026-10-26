@@ -11,9 +11,15 @@ export type Student = {
   learning_plan: LearningPlan; plan_history?: LearningPlan[] | null
   training_active: boolean; qualification: 'unqualified'
 }
+export type HistoricalDataset = {
+  id: string; instrument: 'XAUUSD'; timeframe: 'M15'; provider: string
+  state: 'quarantined'; research_eligible: false; source_hash: string; canonical_hash: string
+  quality_report: { rows: number; gap_count: number; calendar_days: number; warnings: string[]; first_open: string; last_close: string }
+  ingested_at: string
+}
 export type CEO = { email: string; role: 'ceo'; csrf_token: string }
 export type Dashboard = {
-  students_total: number; students_training: number; research_qualified: number
+  students_total: number; students_training: number; research_qualified: number; historical_datasets_total: number
   market_data_status: string; research_status: string
   historical_trading: string; paper_trading: string; live_trading: string
   system_health: string; net_pnl: number | null; open_positions: number | null

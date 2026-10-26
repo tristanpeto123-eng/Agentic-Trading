@@ -1,4 +1,4 @@
-name: Agentic Trading - Sprint 1 Verification
+name: Agentic Trading - Sprint 2 Verification
 on:
   push:
   pull_request:
