@@ -87,3 +87,13 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 **Check:** Pytest S0–S6 suite; migration upgrade; same-input reproducibility, resume, integrity tamper and model-data leakage tests; GitHub backend/frontend/mobile checks. See `docs/SPRINT6_CHECK.md`.
 
 **Act:** Harden for real verified datasets and independent Examiner (S7), then automate bounded student training with leases (S8). No paper/live activation from research results.
+
+## Sprint 7 — PDCA
+
+**Plan:** Independent replay of frozen challenger and incumbent on identical historical bid/ask M1, after-cost numeric grading and chronological embargo, without deployment authority.
+
+**Do:** Immutable `ExamPlan`, checkpoint/source binding, deterministic Examiner, SQL migration, CEO-only read-only exam report panel.
+
+**Check:** Backend regression, provenance/leakage/tamper/good-but-unqualified fixture tests; GitHub backend/frontend/mobile CI. See `docs/SPRINT7_CHECK.md`.
+
+**Act:** Unlock only with independently verified data, sealed holdouts, independent reproduction, multiple-trial safeguards and future Registrar. No research promotion or paper/live activation in S7.

@@ -38,3 +38,8 @@
 - Added offline research-only PyTorch MLP training with safe point-in-time S5 episode snapshots.
 - Added no-pickle SHA-verified checkpoint recovery and per-epoch loss history with Alembic revision `0004_s6`.
 - Added CEO read-only Training panel with learning-loss chart; kept automatic training, trading and qualification disabled.
+
+## Sprint 7 — Independent Examiner (draft)
+- Offline, immutable versioned examination plan tied to S6 final checkpoint, dataset and guarded order snapshot.
+- Same-source/cost M1 candidate vs incumbent/cash-baseline replay, independent recomputation of net profitability, PF, drawdown and trade count.
+- Reproducible, hash-checked SQL report and CEO-only student Exams panel. No qualifications or trading permissions available.
