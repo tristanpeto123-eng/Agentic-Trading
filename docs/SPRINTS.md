@@ -117,3 +117,13 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 **Check:** S0–S9 regression, migration `0007_s9`, GitHub CI and no-qualification invariants.
 
 **Act:** Defer qualified mentorship and automated champion promotion until a separately approved independent evidence gate. See `docs/SPRINT9_CHECK.md`.
+
+## Sprint 10 — PDCA (safety and executive UX)
+
+**Plan:** Make evidence integrity, student evolution and autonomous research status observable in the three-tab CEO console.
+
+**Do:** Bounded Sentinel scanner, CEO-only emergency stop, authenticated research overview views.
+
+**Check:** S0–S10 regressions, migration `0008_s10`, GitHub frontend/mobile and auth/CORS safety gates.
+
+**Act:** Never equate integrity health with a licence, model qualification or permission to trade. See `docs/SPRINT10_CHECK.md`.

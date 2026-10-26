@@ -111,3 +111,7 @@ The **offline Academy scheduler** uses bounded, durable idempotent lessons and j
 ## Sprint 9 strategy evolution
 
 Research Strategy DNA and peer lessons are now versioned and tamper-checked. No candidate gains trading qualification or permission by inheritance. See `docs/EVOLUTION.md`.
+
+## Sprint 10 executive safety interface
+
+Sentinel scans research integrity and the CEO may set a durable stop latch. No unlock and no execution services are provided. Student Academy and Strategy DNA views are read-only. See `docs/SENTINEL.md`.
