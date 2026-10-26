@@ -49,7 +49,10 @@ jobs:
           assert code == 200, code
           caps = json.loads(body)
           for key in ("paper_trading_enabled", "live_trading_enabled", "broker_connected",
-                      "automatic_training_enabled", "historical_data_import_enabled"):
+                      "automatic_training_enabled", "historical_execution_enabled"):
               assert caps[key] is False, f"Unsafe preview capability: {key}={caps[key]}"
-          print("Render preview: SPA served, CEO API protected, market imports and trading disabled.")
+          assert caps["historical_candle_replay_enabled"] is True
+          assert caps["research_data_qualified"] is False
+          # PostgreSQL-backed uploads may be enabled, but never imply qualification or orders.
+          print("Render preview: CEO access protected, candle replay available, financial trading locked.")
           PY
