@@ -33,6 +33,7 @@ from agentic_trading.sentinel import scan_health, engage_stop, safety_latch, Sen
 from agentic_trading.paper_readiness import evaluate_readiness, paper_requests, PaperReadinessError
 from agentic_trading.settings import Settings
 from agentic_trading.historical_store import DATABASE_ARTIFACT_PATH, store_historical_artifacts, verified_candles
+from agentic_trading.historical_demo import build_historical_demo
 from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, new_session_factory
 
 
@@ -124,7 +125,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "research_training_enabled": False, "historical_execution_enabled": False,
             "paper_trading_enabled": False, "live_trading_enabled": False,
             "broker_connected": False, "student_creation_enabled": True,
-            "historical_data_import_enabled": historical_upload_available, "historical_candle_replay_enabled": True, "research_data_qualified": False,
+            "historical_data_import_enabled": historical_upload_available, "historical_candle_replay_enabled": True, "historical_synthetic_demo_enabled": True, "research_data_qualified": False,
             "skills_catalog_enabled": True, "episodic_memory_read_enabled": True,
             "independent_skill_mastery_enabled": False, "automatic_memory_ingest_enabled": False,
             "offline_neural_research_training_available": True, "automatic_training_enabled": False,
@@ -176,6 +177,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "source_hash": row.source_hash, "canonical_hash": row.canonical_hash,
                 "source_manifest": row.source_manifest, "quality_report": row.quality_report,
                 "state": row.state, "research_eligible": False, "ingested_at": row.ingested_at}
+
+    @api.get("/v1/historical/demo")
+    def historical_demo(_: tuple[CEO, dict] = Depends(current_ceo)):
+        """Offline fixture replay only: no orders placed and no qualified market evidence."""
+        return build_historical_demo()
 
     @api.get("/v1/datasets")
     def datasets(_: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):
