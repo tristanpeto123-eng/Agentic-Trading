@@ -107,3 +107,13 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 **Check:** S0–S8 pytest suite and migration through `0006_s8`, plus GitHub CI and source-rights gate.
 
 **Act:** Keep verified-data training and exam automation disabled until an independently licensed, auditable historical data provider is available. See `docs/SPRINT8_CHECK.md`.
+
+## Sprint 9 — PDCA (research candidate evolution)
+
+**Plan:** Version every student's individual strategy genealogy and reference safe peer lessons.
+
+**Do:** Immutable-by-service DNA/ancestry checks, candidate inheritance, targeted lesson sharing and qualification-blocked mentorship.
+
+**Check:** S0–S9 regression, migration `0007_s9`, GitHub CI and no-qualification invariants.
+
+**Act:** Defer qualified mentorship and automated champion promotion until a separately approved independent evidence gate. See `docs/SPRINT9_CHECK.md`.
