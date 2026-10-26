@@ -10,7 +10,7 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 | S3 | Historical execution simulator | **Fixture engine implemented, awaiting CI & independent data/source integration** |
 | S4 | Scout A/B, Strategist B, Guardian A | **Offline deterministic baseline implemented; under review; source gate open** |
 | S5 | Skill/memory engine | **Locally verified (90 tests); pending CI / PR review** |
-| S6 | Neural training and checkpoints | Not started |
+| S6 | Neural training and checkpoints | **Implementation under review; fixture-only model; source qualification pending** |
 | S7 | Independent Examiner | Not started |
 | S8 | Autonomous Academy | Not started |
 | S9 | Evolution, peer teaching, mentorship | Not started |
@@ -77,3 +77,13 @@ Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete 
 **Check:** 89 local backend tests passed; GitHub frontend + mobile pending. See `docs/SPRINT5_CHECK.md`.
 
 **Act:** Use only independently verified and partitioned market sources in later Exam/learning workflows. No paper/live trading or skill promotion from S5 archive.
+
+## Sprint 6 — PDCA
+
+**Plan:** Add a per-student neural training research experiment without confusing synthetic fixtures with qualified evidence, model mastery or profitable trading results. All inputs must be visible by a frozen as-of timestamp, and the validation period must follow training chronologically.
+
+**Do:** PyTorch small signal-context MLP predicts sign-log net R and Good probability, using only regime/market/tactic fields known at signal time; bounded epochs/seed/LR; train-only memory; purged chronological diagnostic validation; atomic JSON state dict snapshots per epoch; restart/resume/idempotency; training_runs SQL metadata + Alembic migration; authenticated read-only student training progress with loss curves.
+
+**Check:** Backend regressions, separate CPU-PyTorch CI, migrations and frontend/mobile CI, denial of quarantined/holdout/future data, checksum corruption, student isolation, plan-scope guard, stable resume-vs-uninterrupted results. See `docs/SPRINT6_CHECK.md`.
+
+**Act:** Later connect independently eligible verified data and orchestrated worker after provider gating, add early stopping and stronger signal-time market features, then build Examiner (S7). Never promote synthetic results or change live deployed configurations.

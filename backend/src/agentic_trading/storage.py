@@ -88,6 +88,26 @@ class TradeExperience(Base):
     )
 
 
+class TrainingRun(Base):
+    """Research-only candidate metadata; immutable completion evidence (never a promotion)."""
+    __tablename__ = "training_runs"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    student_id: Mapped[str] = mapped_column(String(36), ForeignKey("students.id"), nullable=False)
+    plan_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    skill_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    instrument: Mapped[str] = mapped_column(String(16), nullable=False)
+    experiment_key: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    provenance_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    checkpoint_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    checkpoint_path: Mapped[str] = mapped_column(String(300), nullable=False)
+    training_summary: Mapped[dict] = mapped_column(JSON, nullable=False)
+    state: Mapped[str] = mapped_column(String(32), default="experimental_only", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    __table_args__ = (
+        Index("ix_training_student_created", "student_id", "created_at"),
+    )
+
+
 class AuditEvent(Base):
     __tablename__ = "audit_events"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))

@@ -33,3 +33,8 @@
 - Immutable research closed-trade episodes, costs-derived Good / Bad / Flat, student-isolated time-safe recall excluding validation/holdout.
 - SQL append-only-by-service archive, tamper checks, idempotent internal writes and Alembic migration.
 - Read-only CEO skill/memory API and responsive student profile panels. Training and qualification remain disabled.
+
+## Sprint 6 (development branch, pending review)
+- Per-student offline PyTorch signal-context neural baseline, guarded synthetic-fixture inputs only.
+- Chronological purged diagnostic split, per-epoch recoverable checksummed checkpoints, training-run metadata/migration and read-only student learning curves.
+- No verified real-data training, model qualification or live permissions.

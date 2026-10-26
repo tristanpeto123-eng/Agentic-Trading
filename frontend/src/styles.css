@@ -22,3 +22,7 @@
 .memory-outcome{font-size:11px;font-weight:700;color:#b7c5d4;text-transform:uppercase}
 .memory-outcome.good{color:#85d7a6}.memory-outcome.bad{color:#f4a2a2}
 @media(max-width:620px){.skill-progress-row,.memory-row{padding:12px}.memory-totals{gap:8px}.memory-totals span{padding:8px 12px}}
+
+/* Sprint 6: loss curves are explicitly experimental and never displayed as financial P&L. */
+.training-run-list{display:grid;gap:17px}.training-run{background:#0e1b2a;border:1px solid #293e50;border-radius:10px;padding:18px}.training-figures{display:flex;gap:9px;flex-wrap:wrap;margin:14px 0}.training-figures span{padding:9px 12px;border:1px solid #334859;background:#152536;border-radius:7px;color:#9ab2c2;font-size:11px}.training-figures strong{color:#ebf3fa;font-size:14px}.training-chart{margin:12px 0 0}.training-chart svg{width:100%;height:auto;max-height:230px;display:block;background:#091725;border-radius:7px}.training-chart figcaption{display:flex;flex-wrap:wrap;gap:14px;font-size:10px;color:#8da3b5;margin:10px 0 14px}.training-chart figcaption span:before{content:'';width:13px;height:3px;display:inline-block;margin-right:6px;vertical-align:middle;border-radius:2px}.training-chart .training-line-train:before{background:#68c8da}.training-chart .training-line-val:before{background:#e4aa67}.training-warning{font-size:10px;color:#e0bb82;line-height:1.5}
+@media(max-width:620px){.training-run{padding:12px}.training-figures span{padding:8px}.section-tabs{gap:18px}}

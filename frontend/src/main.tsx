@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Activity, ArrowLeft, ArrowRight, BarChart3, BookOpen, Bot, Check, ChevronRight, ClipboardList, Database, GraduationCap, Home, Layers3, LockKeyhole, LogOut, Plus, RefreshCw, ShieldCheck, ShieldOff, Sparkles, UserPlus, Users, X, AlertCircle, Settings2, BookMarked, Search, Target, Clock3, FileUp, FileCheck2 } from 'lucide-react'
+import { Activity, ArrowLeft, ArrowRight, BarChart3, BookOpen, Bot, Check, ChevronRight, ClipboardList, Database, GraduationCap, Home, Layers3, LockKeyhole, LogOut, Plus, RefreshCw, ShieldCheck, ShieldOff, Sparkles, UserPlus, Users, X, AlertCircle, Settings2, BookMarked, Search, Target, Clock3, FileUp, FileCheck2, BrainCircuit } from 'lucide-react'
 import { api, APIError, MARKETS, SKILLS, setCsrf } from './api'
-import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, PlanInput, Skill, Student, StudentInput, StudentSkillProgress, StudentMemory, Tab, TradingMode } from './api'
+import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, PlanInput, Skill, Student, StudentInput, StudentSkillProgress, StudentMemory, TrainingHistory, ResearchTrainingRun, Tab, TradingMode } from './api'
 import './styles.css'
 
 const NUM_FORMAT = new Intl.NumberFormat('en-GB')
@@ -203,18 +203,65 @@ function ProfileMemoryPane({ student }: { student: Student }) {
     </div>
   </section>
 }
+function TrainingCurve({ run }: { run: ResearchTrainingRun }) {
+  const metrics = run.curve
+  const maxLoss = Math.max(0.01, ...metrics.flatMap(x => [x.train_loss, x.validation_loss])) * 1.07
+  const chartW = 560; const chartH = 168
+  const point = (epoch: number, loss: number) => {
+    const x = 15 + (epoch - 1) * (chartW - 30) / Math.max(1, metrics.length - 1)
+    const y = chartH - 12 - loss / maxLoss * (chartH - 26)
+    return `${x.toFixed(2)},${y.toFixed(2)}`
+  }
+  return <figure className="training-chart">
+    <svg viewBox={`0 0 ${chartW} ${chartH}`} role="img" aria-label="Training and internal validation losses by epoch" preserveAspectRatio="none">
+      <line x1="15" y1="10" x2="15" y2={chartH - 12} stroke="#345062"/>
+      <line x1="15" y1={chartH - 12} x2={chartW - 15} y2={chartH - 12} stroke="#345062"/>
+      <polyline points={metrics.map(x => point(x.epoch, x.train_loss)).join(' ')} fill="none" stroke="#68c8da" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
+      <polyline points={metrics.map(x => point(x.epoch, x.validation_loss)).join(' ')} fill="none" stroke="#e4aa67" strokeWidth="2.5" vectorEffect="non-scaling-stroke" strokeDasharray="6 4" />
+    </svg>
+    <figcaption><span className="training-line-train">Training loss</span><span className="training-line-val">Internal validation loss</span><span>Epochs: {run.epochs_completed}</span></figcaption>
+  </figure>
+}
+function ProfileTrainingPane({ student }: { student: Student }) {
+  const [data, setData] = useState<TrainingHistory | null>(null)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    let active = true
+    void api<TrainingHistory>(`/v1/students/${student.id}/training`).then(value => {
+      if (active) setData(value)
+    }).catch(err => { if (active) setError(err instanceof Error ? err.message : 'Could not load training') })
+    return () => { active = false }
+  }, [student.id])
+  if (error) return <div className="surface panel"><p className="message-error" role="alert">{error}</p></div>
+  if (!data) return <div className="surface empty-panel"><p>Loading experiment history…</p></div>
+  return <section className="surface panel">
+    <div className="panel-heading"><div><p className="eyebrow">ACADEMY / RESEARCH LAB</p><h3>Neural development history</h3></div><BrainCircuit size={19}/></div>
+    <div className="panel-content">
+      <p className="skills-disclaimer">Offline development experiments only. Loss curves show how a model fits synthetic examples—not trading profit, evidence of mastery or approval to deploy.</p>
+      {data.runs.length === 0 ? <div className="dataset-empty"><BrainCircuit size={19}/><span>No neural experiments yet. Training requires the offline worker and eligible development fixtures. Live research training awaits independently verified market data.</span></div>
+        : <div className="training-run-list">{data.runs.map(run => <article className="training-run" key={run.experiment_key}>
+          <div className="skill-progress-head"><strong>{run.market} · {titleCase(run.tactic)}</strong><span className="pill pill-amber">Experimental · unqualified</span></div>
+          <div className="skill-progress-meta"><span>{run.model_version} · plan v{run.plan_version}</span><span>{friendlyDate(run.created_at)}</span></div>
+          <div className="training-figures"><span><strong>{run.train_examples}</strong> training examples</span><span><strong>{run.validation_examples}</strong> validation examples</span><span><strong>{run.epochs_completed}</strong> epochs</span></div>
+          <TrainingCurve run={run}/>
+          <small className="training-warning">Synthetic fixture · no independent examination · no trading qualification</small>
+        </article>)}</div>}
+    </div>
+  </section>
+}
 function StudentProfile({ student, onBack, onEdit }: { student: Student; onBack: () => void; onEdit: () => void }) {
-  const [section, setSection] = useState<'overview' | 'skills' | 'memory' | 'exams'>('overview')
+  const [section, setSection] = useState<'overview' | 'skills' | 'memory' | 'training' | 'exams'>('overview')
   const history = student.plan_history ?? [student.learning_plan]
   return <div className="page-enter">
     <button className="back-link" onClick={onBack}><ArrowLeft size={16}/> All students</button>
     <div className="profile-head"><div className="student-avatar student-avatar-lg">{student.name[0]?.toUpperCase()}</div><div className="profile-name"><p className="eyebrow">STUDENT / {shortId(student)}</p><h1>{student.name}</h1><div className="profile-meta"><ModePill mode={student.learning_plan.mode}/><span className="pill pill-muted">Awaiting research</span><span className="muted">Enrolled {friendlyDate(student.created_at)}</span></div></div><button className="btn btn-secondary" onClick={onEdit}><Settings2 size={17}/> Change direction</button></div>
-    <div className="profile-summary"><Sparkles size={20}/><div><strong>Academy briefing</strong><p>{student.name} has been enrolled with {student.learning_plan.mode === 'autonomous' ? 'an autonomous research plan. Academy will select learning targets when training is available.' : `a CEO-directed plan covering ${student.learning_plan.markets.join(', ')} and ${student.learning_plan.skills.map(titleCase).join(', ')}.`} Training has not started. Historical data and learning workers arrive in later sprints.</p></div></div>
-    <div className="section-tabs" role="tablist" aria-label="Student profile sections">{(['overview','skills','memory','exams'] as const).map(tab => <button key={tab} role="tab" aria-selected={section === tab} className={section === tab ? 'active' : ''} onClick={() => setSection(tab)}>{titleCase(tab)}</button>)}</div>
+    <div className="profile-summary"><Sparkles size={20}/><div><strong>Academy briefing</strong><p>{student.name} has been enrolled with {student.learning_plan.mode === 'autonomous' ? 'an autonomous research plan. Academy will select learning targets when training is available.' : `a CEO-directed plan covering ${student.learning_plan.markets.join(', ')} and ${student.learning_plan.skills.map(titleCase).join(', ')}.`} Neural research is available only for offline development fixtures; verified-data training awaits a qualified provider.</p></div></div>
+    <div className="section-tabs" role="tablist" aria-label="Student profile sections">{(['overview','skills','memory','training','exams'] as const).map(tab => <button key={tab} role="tab" aria-selected={section === tab} className={section === tab ? 'active' : ''} onClick={() => setSection(tab)}>{titleCase(tab)}</button>)}</div>
     {section === 'overview' && <div className="two-columns"><section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">CURRENT DIRECTION</p><h3>Learning plan <span className="version">v{student.learning_plan.version}</span></h3></div><Target size={18}/></div><div className="panel-content"><div className="plan-row"><span>Mode</span><ModePill mode={student.learning_plan.mode}/></div><div className="plan-row"><span>Target markets</span><strong>{student.learning_plan.markets.length ? student.learning_plan.markets.join(', ') : 'Academy selected (future)'}</strong></div><div className="plan-row"><span>Target skills</span><strong>{student.learning_plan.skills.length ? student.learning_plan.skills.map(titleCase).join(', ') : 'Academy selected (future)'}</strong></div><div className="plan-row"><span>Qualification</span><strong>Not yet assessed</strong></div><button className="text-action" onClick={onEdit}>Adjust learning plan <ArrowRight size={15}/></button></div></section>
       <section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">VERSION HISTORY</p><h3>Development record</h3></div><Clock3 size={18}/></div><div className="panel-content"><div className="timeline">{[...history].reverse().map((plan: LearningPlan) => <div key={plan.version} className="timeline-item"><div className="timeline-mark"/><div><strong>Learning plan v{plan.version}</strong><p>{plan.reason}</p><small>{friendlyDate(plan.created_at)} · {plan.mode === 'autonomous' ? 'Autonomous' : 'CEO-directed'}</small></div></div>)}</div></div></section></div>}
     {section === 'skills' && <ProfileSkillsPane student={student}/>}
     {section === 'memory' && <ProfileMemoryPane student={student}/>}
+    {section === 'training' && <ProfileTrainingPane student={student}/>}
     {section === 'exams' && <div className="surface empty-panel"><EmptyIcon icon={ClipboardList}/><h3>No examinations taken</h3><p>Students must earn qualifications from independent, leakage-checked evidence. No qualifications are granted at enrolment.</p></div>}
   </div>
 }
@@ -364,7 +411,7 @@ function App() {
   if (!ceo) return <Login onLogin={user => { setCeo(user); setTab('home'); setActiveStudent(null) }}/>
   const nav: { id: Tab; label: string; icon: typeof Home }[] = [ { id: 'home', label: 'Home', icon: Home }, { id: 'students', label: 'Students', icon: Users }, { id: 'trading', label: 'Trading', icon: BarChart3 } ]
   return <div className="app-shell">
-    <aside className="sidebar"><div className="brand"><span className="brand-symbol"><Layers3 size={19}/></span><span>AGENTIC<strong>TRADING</strong></span></div><div className="sidebar-section"><p className="eyebrow">WORKSPACE</p><nav aria-label="Main navigation">{nav.map(n => <button key={n.id} className={`sidebar-link ${tab === n.id ? 'active' : ''}`} onClick={() => navigate(n.id)}><n.icon size={18}/>{n.label}{tab === n.id && <span className="nav-indicator"/>}</button>)}</nav></div><div className="sidebar-spacer"/><div className="side-system"><span className="online-dot"/><span>Research workspace</span><small>Development / S5</small></div><button className="sidebar-user" onClick={logout} title="Sign out"><span className="user-avatar">CEO</span><span><strong>Chief Executive</strong><small>{ceo.email}</small></span><LogOut size={17}/></button></aside>
+    <aside className="sidebar"><div className="brand"><span className="brand-symbol"><Layers3 size={19}/></span><span>AGENTIC<strong>TRADING</strong></span></div><div className="sidebar-section"><p className="eyebrow">WORKSPACE</p><nav aria-label="Main navigation">{nav.map(n => <button key={n.id} className={`sidebar-link ${tab === n.id ? 'active' : ''}`} onClick={() => navigate(n.id)}><n.icon size={18}/>{n.label}{tab === n.id && <span className="nav-indicator"/>}</button>)}</nav></div><div className="sidebar-spacer"/><div className="side-system"><span className="online-dot"/><span>Research workspace</span><small>Development / S6</small></div><button className="sidebar-user" onClick={logout} title="Sign out"><span className="user-avatar">CEO</span><span><strong>Chief Executive</strong><small>{ceo.email}</small></span><LogOut size={17}/></button></aside>
     <div className="workspace"><header className="topbar"><div className="topbar-left"><span className="breadcrumb-brand">Agentic Trading</span><ChevronRight size={14}/><span>{tab === 'students' && activeStudent ? activeStudent.name : titleCase(tab)}</span></div><div className="topbar-right"><span className="environment-tag"><span className="online-dot"/> RESEARCH</span><button className="icon-button top-refresh" onClick={() => void refresh()} disabled={loading} title="Refresh data" aria-label="Refresh"><RefreshCw size={17} className={loading ? 'spin' : ''}/></button><span className="top-avatar">CEO</span></div></header>
       <main className="main-content">
         {error && <div className="message-error page-error" role="alert"><AlertCircle size={17}/>{error}<button onClick={() => setError('')} aria-label="Dismiss"><X size={16}/></button></div>}
