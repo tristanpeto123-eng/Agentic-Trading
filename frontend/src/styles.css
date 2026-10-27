@@ -81,3 +81,10 @@
   .demo-speed{margin-left:0}
   .demo-chart{max-height:none}
 }
+
+/* Historical research is navigable; actual execution remains explicitly locked. */
+.scope-selector .historical-shortcut{display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;padding:7px 9px;color:#c1e4ed;border:1px solid #2b6b71;background:#133039;border-radius:7px;font-size:11px;font-weight:650}
+.scope-selector .historical-shortcut strong{font-size:9px;letter-spacing:.035em;color:#80dfb4}
+.scope-selector .historical-shortcut:focus-visible{outline:2px solid #72cae8}
+.scope-selector>span{color:#8290a6}
+@media(max-width:620px){.scope-selector{flex-wrap:wrap;gap:9px;padding:13px 14px 0}.scope-selector .historical-shortcut{min-height:40px}}
