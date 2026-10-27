@@ -13,10 +13,10 @@ export function parseLocalHistoricalCsv(raw: string, loadedAtMs: number): {
   const source = raw.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').trimEnd()
   const lines = source.split('\n')
   const header = lines.shift()?.trim()
-  if (header !== 'timestamp_open,open,high,low,close' &&
-      header !== 'timestamp_open,open,high,low,close,volume')
-    throw new Error('CSV needs timestamp_open,open,high,low,close[,volume] in exactly that order.')
-  const columns = header.split(',').length
+  if (!['timestamp_open,open,high,low,close', 'timestamp_open,open,high,low,close,volume',
+    'time,open,high,low,close', 'time,open,high,low,close,volume'].includes(header || ''))
+    throw new Error('CSV needs (timestamp_open|time),open,high,low,close[,volume] in exactly that order.')
+  const columns = (header ?? '').split(',').length
   if (lines.length === 0 || lines.length > MAX_BARS)
     throw new Error('CSV must contain between 1 and 80,000 completed M15 candles.')
   const bars: Candle[] = []

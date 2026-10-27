@@ -17,7 +17,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 UTC = timezone.utc
 STEP = timedelta(minutes=15)
@@ -28,15 +28,23 @@ MAX_ROWS = 80_000
 class SourceManifest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     provider: str = Field(min_length=3, max_length=120)
-    source_url: str = Field(pattern=r"^https://", max_length=1000)
+    source_url: str | None = Field(default=None, pattern=r"^https://", max_length=1000)
     instrument: Literal["XAUUSD"] = "XAUUSD"
     timeframe: Literal["M15"] = "M15"
-    price_basis: Literal["bid", "ask", "mid", "trade"]
+    price_basis: Literal["bid", "ask", "mid", "trade", "unknown"]
     timezone: Literal["UTC"] = "UTC"
     acquired_at: datetime
     rights_reference: str = Field(min_length=8, max_length=500)
     extraction_reference: str = Field(min_length=3, max_length=500)
     evidence_kind: Literal["historical", "synthetic"] = "historical"
+
+    @model_validator(mode="after")
+    def require_provenance_for_named_provider(self):
+        if self.provider != "USER_SUPPLIED_UNVERIFIED" and not self.source_url:
+            raise ValueError("A documented provider requires an HTTPS source URL; alternatively declare USER_SUPPLIED_UNVERIFIED")
+        if self.provider == "USER_SUPPLIED_UNVERIFIED" and self.rights_reference != "UNVERIFIED_OWNER_ARCHIVE":
+            raise ValueError("Owner-unverified imports must explicitly declare UNVERIFIED_OWNER_ARCHIVE")
+        return self
 
     @field_validator("acquired_at")
     @classmethod
@@ -111,10 +119,11 @@ def ingest_csv(csv_content: str, acquired_at: datetime) -> tuple[list[Candle], d
     if len(original) > MAX_CSV_BYTES:
         raise DataQualityError("CSV exceeds 12MiB safe-import limit")
     reader = csv.DictReader(io.StringIO(csv_content, newline=""), strict=True)
-    required = {"timestamp_open", "open", "high", "low", "close"}
     names = reader.fieldnames or []
+    timestamp_column = "timestamp_open" if "timestamp_open" in names else "time"
+    required = {timestamp_column, "open", "high", "low", "close"}
     if set(names) not in (required, required | {"volume"}) or len(names) != len(set(names)):
-        raise DataQualityError("Expected exactly timestamp_open,open,high,low,close[,volume]")
+        raise DataQualityError("Expected exactly (timestamp_open|time),open,high,low,close[,volume]")
     rows: list[Candle] = []
     gaps: list[dict] = []
     warnings: list[str] = []
@@ -129,7 +138,7 @@ def ingest_csv(csv_content: str, acquired_at: datetime) -> tuple[list[Candle], d
         try:
             if None in row or any(value is None for value in row.values()):
                 raise DataQualityError("wrong number of columns")
-            dt = parse_iso_utc(row["timestamp_open"])
+            dt = parse_iso_utc(row[timestamp_column])
             if dt.minute % 15 != 0 or dt.second or dt.microsecond:
                 raise DataQualityError("M15 candle timestamp must align to a UTC quarter hour")
             if dt + STEP > acquired_at:
