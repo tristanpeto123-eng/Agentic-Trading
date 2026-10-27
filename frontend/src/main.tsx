@@ -6,6 +6,7 @@ import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, Pla
 import { HistoricalResearch } from './HistoricalResearch'
 import { HistoricalDemoLab } from './HistoricalDemoLab'
 import { BrowserCsvReplay } from './BrowserCsvReplay'
+import { MarketStudy } from './MarketStudy'
 import './styles.css'
 
 const NUM_FORMAT = new Intl.NumberFormat('en-GB')
@@ -275,11 +276,11 @@ function ProfileAcademyPane({ student }: { student: Student }) {
   const [value,setValue] = useState<AcademyState|null>(null)
   const [error,setError] = useState('')
   useEffect(() => { let active=true; void api<AcademyState>(`/v1/students/${student.id}/academy`).then(r=>{if(active)setValue(r)}).catch(e=>{if(active)setError(String(e))}); return ()=>{active=false} },[student.id])
-  return <section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">RESEARCH SCHEDULER</p><h3>Academy lessons</h3></div><GraduationCap size={18}/></div><div className="panel-content">
+  return <><section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">RESEARCH SCHEDULER</p><h3>Academy lessons</h3></div><GraduationCap size={18}/></div><div className="panel-content">
     {error && <p role="alert">{error}</p>}{!value && !error && <p>Loading Academy…</p>}
     {value && <><p className="skills-disclaimer">{value.note}</p><div className="plan-row"><span>Next lesson</span><strong>{value.curriculum.next_lesson}</strong></div><div className="plan-row"><span>Learning plan</span><strong>v{value.curriculum.plan_version}</strong></div>
       {!value.jobs.length ? <div className="dataset-empty">No scheduled research jobs yet.</div> : value.jobs.map(job=><div key={job.id} className="memory-row"><strong>{job.market} · {job.tactic}</strong><span className="pill pill-muted">{titleCase(job.state)}</span><p>Attempt {job.attempts} · Unqualified research</p></div>)}</>}
-  </div></section>
+  </div></section><MarketStudy studentId={student.id}/></>
 }
 function ProfileEvolutionPane({ student }: { student: Student }) {
   const [value,setValue] = useState<EvolutionState|null>(null)
