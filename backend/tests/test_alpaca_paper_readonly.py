@@ -16,7 +16,7 @@ from agentic_trading.storage import Base, CEO, new_session_factory
 ACCOUNT_ID = "paper-btc-test-account"
 
 
-def mock_client(account_id=ACCOUNT_ID, status="ACTIVE", quote=True):
+def mock_client(account_id=ACCOUNT_ID, status="ACTIVE", quote=True, malformed_quote=False):
     def respond(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"  # No order writes are possible.
         assert request.headers["APCA-API-KEY-ID"] == "test-paper-key"
@@ -35,9 +35,9 @@ def mock_client(account_id=ACCOUNT_ID, status="ACTIVE", quote=True):
         if request.url.path == "/v1beta3/crypto/us/latest/quotes":
             assert request.url.host == "data.alpaca.markets"
             assert request.url.params["symbols"] == "BTC/USD"
-            return httpx.Response(200, json={"quotes": {
+            return httpx.Response(200, json={"quotes": None if malformed_quote else ({
                 "BTC/USD": {"bp": 70000, "ap": 70020, "t": "2026-10-27T19:00:00Z"}
-            } if quote else {}})
+            } if quote else {})})
         raise AssertionError("Unexpected request: " + str(request.url))
     return httpx.Client(transport=httpx.MockTransport(respond))
 
@@ -69,6 +69,10 @@ def test_inactive_account_and_missing_quote_fail_closed():
             preview_btc_paper(key_id="test-paper-key", secret_key="test-paper-secret",
                               expected_account_id=ACCOUNT_ID, client=client)
     with mock_client(quote=False) as client:
+        with pytest.raises(PaperPreviewError, match="bid/ask unavailable"):
+            preview_btc_paper(key_id="test-paper-key", secret_key="test-paper-secret",
+                              expected_account_id=ACCOUNT_ID, client=client)
+    with mock_client(malformed_quote=True) as client:
         with pytest.raises(PaperPreviewError, match="bid/ask unavailable"):
             preview_btc_paper(key_id="test-paper-key", secret_key="test-paper-secret",
                               expected_account_id=ACCOUNT_ID, client=client)
