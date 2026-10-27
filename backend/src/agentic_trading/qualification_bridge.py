@@ -48,7 +48,7 @@ def inspect_historical_csv(
         "qualification": {
             **assessment.__dict__,
             "issues": issues,
-            "data_screen_passed": assessment.research_eligible and not issues,
+            "data_screen_passed": assessment.data_screen_passed and not issues,
             "research_eligible": False,
             "independent_source_verification_required": True,
             "paper_eligible": False,
