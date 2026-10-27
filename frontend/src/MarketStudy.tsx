@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from './api'
 import type { HistoricalDataset } from './api'
-import { Activity, Database, Pause, Play, RefreshCw, ShieldAlert } from 'lucide-react'
+import { Activity, Database, Pause, Play, ShieldAlert } from 'lucide-react'
 
 type StudyBatch = {
   batch: number
