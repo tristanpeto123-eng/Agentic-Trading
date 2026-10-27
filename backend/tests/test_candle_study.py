@@ -29,10 +29,11 @@ def sample(n=2000):
 
 
 def research(rows=None, **kwargs):
+    options = {"embargo_bars": 24}
+    options.update(kwargs)
     return study_candles(rows if rows is not None else sample(),
                          dataset_id="imported-test-dataset",
-                         source_sha256=SOURCE,
-                         embargo_bars=24, **kwargs)
+                         source_sha256=SOURCE, **options)
 
 
 def test_five_batch_updates_are_visible_and_holdout_remains_sealed():
