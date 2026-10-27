@@ -31,6 +31,25 @@ jobs:
               print("FAILED: One or both Alpaca paper API secrets are missing.")
               sys.exit(1)
 
+          # Validate secret formatting without printing values, prefixes or lengths.
+          malformed = False
+          for label, value in (("APCA_API_KEY_ID", key_id), ("APCA_API_SECRET_KEY", secret_key)):
+              if value != value.strip():
+                  print(f"FAILED: {label} has leading or trailing whitespace.")
+                  malformed = True
+              if any(char in value for char in ("\\n", "\\r", "\\t", '"', "'")):
+                  print(f"FAILED: {label} contains a newline, tab or quotation mark.")
+                  malformed = True
+              if any(ord(char) < 32 or ord(char) > 126 for char in value):
+                  print(f"FAILED: {label} contains a non-printable or non-ASCII character.")
+                  malformed = True
+          if malformed:
+              sys.exit(1)
+          if key_id == secret_key:
+              print("FAILED: API Key ID and Secret Key are identical; check field mapping.")
+              sys.exit(1)
+          print("Credential presence and formatting checks passed (not proof of validity).")
+
           request = Request(
               "https://paper-api.alpaca.markets/v2/account",
               headers={
