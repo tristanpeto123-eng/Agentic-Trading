@@ -80,3 +80,16 @@ def test_no_losses_no_trades_and_bad_window_cannot_pass():
     with pytest.raises(ValueError, match="positive"):
         review_holdout(report([]), starts_at=T, ends_at=T + timedelta(minutes=1),
                        min_closed_trades=0)
+
+
+def test_unresolved_trade_from_before_window_still_blocks():
+    unfinished = TradeRecord(proposal_id="prior", status="UNRESOLVED",
+                             reason="MISSING_M1_DURING_POSITION",
+                             entry_at=T - timedelta(minutes=1),
+                             entry_fill=Decimal("100"), quantity_oz=Decimal("1"))
+    sample = [unfinished, trade(2, 10), trade(4, -1)]
+    r = review_holdout(report(sample), starts_at=T, ends_at=T + timedelta(minutes=7),
+                       min_closed_trades=2)
+    assert r["unresolved_trades"] == 1
+    assert not r["performance_screen_met"]
+    assert not r["paper_eligible"]
