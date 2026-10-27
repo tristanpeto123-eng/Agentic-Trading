@@ -24,6 +24,7 @@ test('iPhone Historical: import quarantined XAUUSD M15, inspect and play candles
   await page.locator('.data-import-form input[type="file"]').setInputFiles({
     name: 'ci-synthetic-m15.csv', mimeType: 'text/csv', buffer: Buffer.from(rows.join('\n') + '\n')
   })
+  await page.getByLabel('Owner-supplied private file').uncheck()
   await page.getByLabel('Source provider').fill('CI Synthetic Replay Fixture')
   await page.getByLabel('Export or source URL (HTTPS)').fill('https://example.org/ci-fixture')
   await page.getByLabel('Export reference').fill('synthetic-ci-e2e-001')
