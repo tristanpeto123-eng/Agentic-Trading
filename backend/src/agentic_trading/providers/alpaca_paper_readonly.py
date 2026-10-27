@@ -72,7 +72,8 @@ def preview_btc_paper(
         )
         if not isinstance(positions, list) or not isinstance(orders, list):
             raise PaperPreviewError("Unexpected Alpaca positions or orders")
-        quote = quotes.get("quotes", {}).get(BTC_PAIR) if isinstance(quotes, dict) else None
+        quote_map = quotes.get("quotes") if isinstance(quotes, dict) else None
+        quote = quote_map.get(BTC_PAIR) if isinstance(quote_map, dict) else None
         if not isinstance(quote, dict) or quote.get("bp") is None or quote.get("ap") is None:
             raise PaperPreviewError("BTC/USD bid/ask unavailable")
         clean = not orders and not positions
