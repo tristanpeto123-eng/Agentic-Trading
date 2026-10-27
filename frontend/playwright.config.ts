@@ -5,6 +5,9 @@ export default defineConfig({
   timeout: 40_000,
   expect: { timeout: 10_000 },
   retries: 1,
+  // All E2E scenarios use one ephemeral CEO and SQLite database; parallel
+  // writers can produce misleading import/provenance collisions.
+  workers: 1,
   reporter: [['list']],
   use: {
     baseURL: 'http://127.0.0.1:5173',
