@@ -41,4 +41,15 @@ test('iPhone Historical: import quarantined XAUUSD M15, inspect and play candles
   await expect(page.getByRole('button', { name: 'Pause replay' })).toBeVisible()
   await page.getByRole('button', { name: 'Pause replay' }).click()
   await page.screenshot({ path: 'screenshots/04-historical-replay-mobile.png', fullPage: true })
+
+  // Owner-supplied private archives do not need fabricated provider URLs.
+  await page.getByRole('button', { name: 'Import CSV' }).click()
+  await page.locator('.data-import-form input[type="file"]').setInputFiles({
+    name: 'owner-native-time.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('time,open,high,low,close\\n2025-04-09T09:00:00Z,4000,4002,3998,4001\\n2025-04-09T09:15:00Z,4001,4003,3999,4002\\n')
+  })
+  await page.getByLabel('Owner-supplied private file').check()
+  await page.getByRole('button', { name: 'Validate & freeze dataset' }).click()
+  await expect(page.getByText(/Import recorded: 2 bars/)).toBeVisible()
+  await expect(page.getByText(/USER_SUPPLIED_UNVERIFIED/).first()).toBeVisible()
 })
