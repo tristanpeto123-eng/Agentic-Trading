@@ -7,6 +7,7 @@ import { HistoricalResearch } from './HistoricalResearch'
 import { HistoricalDemoLab } from './HistoricalDemoLab'
 import { BrowserCsvReplay } from './BrowserCsvReplay'
 import { MarketStudy } from './MarketStudy'
+import { M15TradeScenario } from './M15TradeScenario'
 import './styles.css'
 
 const NUM_FORMAT = new Intl.NumberFormat('en-GB')
@@ -280,7 +281,7 @@ function ProfileAcademyPane({ student }: { student: Student }) {
     {error && <p role="alert">{error}</p>}{!value && !error && <p>Loading Academy…</p>}
     {value && <><p className="skills-disclaimer">{value.note}</p><div className="plan-row"><span>Next lesson</span><strong>{value.curriculum.next_lesson}</strong></div><div className="plan-row"><span>Learning plan</span><strong>v{value.curriculum.plan_version}</strong></div>
       {!value.jobs.length ? <div className="dataset-empty">No scheduled research jobs yet.</div> : value.jobs.map(job=><div key={job.id} className="memory-row"><strong>{job.market} · {job.tactic}</strong><span className="pill pill-muted">{titleCase(job.state)}</span><p>Attempt {job.attempts} · Unqualified research</p></div>)}</>}
-  </div></section><MarketStudy studentId={student.id}/></>
+  </div></section><MarketStudy studentId={student.id}/><M15TradeScenario studentId={student.id}/></>
 }
 function ProfileEvolutionPane({ student }: { student: Student }) {
   const [value,setValue] = useState<EvolutionState|null>(null)
