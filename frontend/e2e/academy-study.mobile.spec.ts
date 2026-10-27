@@ -1,6 +1,5 @@
-"""Mobile end-to-end: imported historical candles drive a real student study,
-not a fabricated P&L simulation or a paper/live trading operation.
-"""
+// Mobile end-to-end: imported historical candles drive a real student study,
+// not fabricated P&L or a paper/live trading operation.
 import { expect, test } from '@playwright/test'
 import { Buffer } from 'node:buffer'
 import { mkdirSync } from 'node:fs'
