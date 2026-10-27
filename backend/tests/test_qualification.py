@@ -22,10 +22,11 @@ def test_unverified_never_qualifies_or_enables_trading():
     assert "data rights unverified" in report.issues
 
 
-def test_valid_dataset_only_research_eligible():
+def test_valid_data_screen_never_grants_research_or_trading_eligibility():
     report = assess_candles(candles(), minimum_rows=10,
                             provenance_verified=True, rights_verified=True)
-    assert report.research_eligible
+    assert report.data_screen_passed
+    assert not report.research_eligible
     assert (report.train_rows, report.validation_rows, report.test_rows) == (6, 2, 2)
     assert not report.paper_eligible and not report.live_eligible
     assert report.dataset_sha256 == assess_candles(candles(), minimum_rows=10).dataset_sha256
