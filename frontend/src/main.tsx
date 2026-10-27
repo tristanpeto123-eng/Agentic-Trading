@@ -403,6 +403,7 @@ function SentinelPanel() {
 }
 function HomePage({ dashboard, onNew, onStudents }: { dashboard: Dashboard | null; onNew: () => void; onStudents: () => void }) {
   const rows = [{ label: 'Enrolled students', value: dashboard ? NUM_FORMAT.format(dashboard.students_total) : '—', icon: Users, detail: 'Created AI identities' },
+    { label: 'Saved datasets', value: dashboard ? NUM_FORMAT.format(dashboard.historical_datasets_total) : '—', icon: Database, detail: 'Imported M15 archives · unverified' },
     { label: 'Students training', value: dashboard ? NUM_FORMAT.format(dashboard.students_training) : '—', icon: GraduationCap, detail: 'Workers not enabled' },
     { label: 'Qualified strategies', value: dashboard ? NUM_FORMAT.format(dashboard.research_qualified) : '—', icon: ShieldCheck, detail: 'Requires independent exams' },
     { label: 'System status', value: dashboard ? 'Online' : '—', icon: Activity, detail: 'API connection status' }]
