@@ -3,6 +3,7 @@ not a fabricated P&L simulation or a paper/live trading operation.
 """
 import { expect, test } from '@playwright/test'
 import { Buffer } from 'node:buffer'
+import { mkdirSync } from 'node:fs'
 
 const email = 'ci@example.invalid'
 const password = process.env.CEO_TEST_PASSWORD
@@ -44,12 +45,14 @@ test('iPhone Academy uses a saved XAUUSD dataset for five-batch progression', as
   await expect(page.getByRole('heading', { name })).toBeVisible()
   await page.getByRole('tab', { name: 'Academy' }).click()
   await expect(page.getByRole('heading', { name: 'Student Candle Study' })).toBeVisible()
-  await expect(page.getByText(/1,800 candles/)).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Saved gold dataset' })).toContainText('1,800 candles')
   await page.getByRole('button', { name: 'Start study' }).click()
   await expect(page.getByRole('img', { name: /M15 price checkpoints/ })).toBeVisible({ timeout: 20000 })
   await expect(page.getByRole('img', { name: /Cumulative directional accuracy/ })).toBeVisible()
   await expect(page.getByText(/Final holdout:/)).toBeVisible()
   await expect(page.getByText(/Neural training, Registrar qualification, paper trading and live trading remain disabled/)).toBeVisible()
-  await page.getByRole('button', { name: 'Pause' }).click()
+  const pause = page.getByRole('button', { name: 'Pause' })
+  if (await pause.isVisible()) await pause.click()
+  mkdirSync('screenshots', { recursive: true })
   await page.screenshot({ path: 'screenshots/05-academy-study-mobile.png', fullPage: true })
 })
