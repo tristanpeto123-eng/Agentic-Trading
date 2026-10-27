@@ -54,8 +54,9 @@ def review_holdout(
             raise ValueError("Filled trade is missing its entry time")
         require_utc(trade.entry_at)
         if trade.status == "UNRESOLVED":
-            if starts_at <= trade.entry_at < ends_at:
-                unresolved += 1
+            # An unresolved exposure can persist across any subsequent window.
+            # Without an exit timestamp, never assume it ended before holdout.
+            unresolved += 1
             continue
         if trade.exit_at is None or trade.net_pnl_usd is None:
             raise ValueError("Closed trade is missing its exit or costed P&L")
