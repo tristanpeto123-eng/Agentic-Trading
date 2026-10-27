@@ -19,7 +19,8 @@ class QualificationReport:
     train_rows: int
     validation_rows: int
     test_rows: int
-    research_eligible: bool
+    data_screen_passed: bool
+    research_eligible: bool = False
     paper_eligible: bool = False
     live_eligible: bool = False
 
@@ -76,5 +77,6 @@ def assess_candles(
     return QualificationReport(
         dataset_sha256=digest, rows=n, issues=tuple(issues),
         train_rows=train, validation_rows=validation, test_rows=test,
-        research_eligible=not issues,
+        data_screen_passed=not issues,
+        research_eligible=False,
     )
