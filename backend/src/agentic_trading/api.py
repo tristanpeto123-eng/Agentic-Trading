@@ -125,7 +125,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "research_training_enabled": False, "historical_execution_enabled": False,
             "paper_trading_enabled": False, "live_trading_enabled": False,
             "broker_connected": False, "student_creation_enabled": True,
-            "historical_data_import_enabled": historical_upload_available, "historical_candle_replay_enabled": True, "historical_synthetic_demo_enabled": True, "research_data_qualified": False,
+            "historical_data_import_enabled": historical_upload_available, "historical_research_enabled": True, "historical_candle_replay_enabled": True, "historical_synthetic_demo_enabled": True, "research_data_qualified": False,
             "skills_catalog_enabled": True, "episodic_memory_read_enabled": True,
             "independent_skill_mastery_enabled": False, "automatic_memory_ingest_enabled": False,
             "offline_neural_research_training_available": True, "automatic_training_enabled": False,
@@ -165,7 +165,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {
             "students_total": total, "historical_datasets_total": count, "students_training": 0, "research_qualified": 0,
             "research_status": "not_started", "market_data_status": "imports_quarantined" if count else "not_connected",
-            "historical_trading": "disabled", "paper_trading": "disabled",
+            "historical_research": "available", "historical_trading": "disabled", "paper_trading": "disabled",
             "live_trading": "disabled", "system_health": "api_online",
             "net_pnl": None, "open_positions": None,
             "attention": ["Historical imports require independent provider/rights verification before training"],
