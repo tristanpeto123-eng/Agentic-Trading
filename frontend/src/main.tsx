@@ -378,7 +378,7 @@ function DataEnginePanel() {
         <small>Maximum 12 MiB. UTC bars only. Potential bad ticks, price jumps and gaps remain flagged. A source label never certifies authenticity or legality.</small>
       </form>}
       <div className="dataset-list">{!datasets.length && <div className="dataset-empty"><Database size={18}/><span>No historical datasets imported yet.</span></div>}
-        {datasets.map(d=><div className="dataset-row" key={d.id}><div className="dataset-summary"><strong>{d.instrument} · {d.timeframe}</strong><span>{d.provider} · {d.quality_report.rows.toLocaleString('en-GB')} bars · {d.quality_report.calendar_days.toFixed(1)} days</span><small>{d.quality_report.gap_count} detected gaps · SHA {d.source_hash.slice(0,12)}…</small></div><span className="pill pill-amber">Quarantined</span></div>)}
+        {datasets.map(d=><div className="dataset-row" key={d.id}><div className="dataset-summary"><strong>{d.instrument} · {d.timeframe}</strong><span>{d.provider} · {d.quality_report.rows.toLocaleString('en-GB')} bars · {d.quality_report.calendar_days.toFixed(1)} days</span><small>{d.quality_report.gap_count} detected gaps · SHA {d.source_hash.slice(0,12)}…</small>{d.quality_report.warnings.map((warning,i)=><small key={i} className="data-quality-warning">⚠ {warning}</small>)}</div><span className="pill pill-amber">Quarantined</span></div>)}
       </div>
     </div>
   </section>
