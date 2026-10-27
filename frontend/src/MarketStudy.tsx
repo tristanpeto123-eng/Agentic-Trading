@@ -153,6 +153,7 @@ export function MarketStudy({ studentId }: { studentId: string }) {
         It compares fixed directional rules using completed historical bars and updates only
         the student's exploratory rule selector every five training batches.
         It does <strong>not</strong> train a neural model, place trades or calculate investable profit.
+        The rule selector is recalculated on demand, not saved as an approved student model.
       </p>
       <div className="historical-toolbar">
         <label>Saved gold dataset
