@@ -31,7 +31,7 @@ class SourceManifest(BaseModel):
     source_url: str | None = Field(default=None, pattern=r"^https://", max_length=1000)
     instrument: Literal["XAUUSD"] = "XAUUSD"
     timeframe: Literal["M15"] = "M15"
-    price_basis: Literal["bid", "ask", "mid", "trade"]
+    price_basis: Literal["bid", "ask", "mid", "trade", "unknown"]
     timezone: Literal["UTC"] = "UTC"
     acquired_at: datetime
     rights_reference: str = Field(min_length=8, max_length=500)
