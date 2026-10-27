@@ -68,7 +68,7 @@ export type CEO = { email: string; role: 'ceo'; csrf_token: string }
 export type Dashboard = {
   students_total: number; students_training: number; research_qualified: number; historical_datasets_total: number
   market_data_status: string; research_status: string
-  historical_trading: string; paper_trading: string; live_trading: string
+  historical_research: 'available'; historical_trading: string; paper_trading: string; live_trading: string
   system_health: string; net_pnl: number | null; open_positions: number | null
   attention: string[]
 }
