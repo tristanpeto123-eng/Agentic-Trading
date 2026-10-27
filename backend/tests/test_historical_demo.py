@@ -41,6 +41,8 @@ def test_demo_requires_ceo_and_keeps_trading_disabled(tmp_path):
         assert client.get("/v1/historical/demo").status_code == 401
         capabilities = client.get("/v1/capabilities").json()
         assert capabilities["historical_synthetic_demo_enabled"] is True
+        assert capabilities["historical_research_enabled"] is True
+        assert capabilities["historical_candle_replay_enabled"] is True
         assert capabilities["historical_execution_enabled"] is False
         assert capabilities["paper_trading_enabled"] is False
         assert capabilities["live_trading_enabled"] is False

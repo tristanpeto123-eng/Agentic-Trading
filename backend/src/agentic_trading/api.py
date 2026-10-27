@@ -31,6 +31,7 @@ from agentic_trading.academy import lesson_plan, student_jobs, AcademyError
 from agentic_trading.evolution import student_evolution, peer_lessons, mentorship_eligibility, EvolutionError
 from agentic_trading.sentinel import scan_health, engage_stop, safety_latch, SentinelError
 from agentic_trading.paper_readiness import evaluate_readiness, paper_requests, PaperReadinessError
+from agentic_trading.providers.alpaca_paper_readonly import preview_btc_paper, PaperPreviewError
 from agentic_trading.settings import Settings
 from agentic_trading.historical_store import DATABASE_ARTIFACT_PATH, store_historical_artifacts, verified_candles
 from agentic_trading.historical_demo import build_historical_demo
@@ -126,7 +127,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "research_training_enabled": False, "historical_execution_enabled": False,
             "paper_trading_enabled": False, "live_trading_enabled": False,
             "broker_connected": False, "student_creation_enabled": True,
-            "historical_data_import_enabled": historical_upload_available, "historical_candle_replay_enabled": True, "historical_candle_study_enabled": True, "historical_synthetic_demo_enabled": True, "research_data_qualified": False,
+            "historical_data_import_enabled": historical_upload_available, "historical_research_enabled": True, "historical_candle_replay_enabled": True, "historical_candle_study_enabled": True, "historical_synthetic_demo_enabled": True, "research_data_qualified": False,
             "skills_catalog_enabled": True, "episodic_memory_read_enabled": True,
             "independent_skill_mastery_enabled": False, "automatic_memory_ingest_enabled": False,
             "offline_neural_research_training_available": True, "automatic_training_enabled": False,
@@ -166,7 +167,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {
             "students_total": total, "historical_datasets_total": count, "students_training": 0, "research_qualified": 0,
             "research_status": "not_started", "market_data_status": "imports_quarantined" if count else "not_connected",
-            "historical_trading": "disabled", "paper_trading": "disabled",
+            "historical_research": "available", "historical_trading": "disabled", "paper_trading": "disabled",
             "live_trading": "disabled", "system_health": "api_online",
             "net_pnl": None, "open_positions": None,
             "attention": ["Historical imports require independent provider/rights verification before training"],
@@ -401,6 +402,42 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                                detail={'locked':True}))
         session.commit()
         return result
+
+    @api.get("/v1/students/{student_id}/paper/btc/diagnostics")
+    def btc_paper_diagnostics(student_id: str, _: tuple[CEO, dict] = Depends(current_ceo),
+                              session: Session = Depends(db)):
+        """GET-only; associates a directed BTC student with a verified paper account."""
+        student = get_student_or_404(student_id, session)
+        latest_plan = student.plans[-1] if student.plans else None
+        if latest_plan is None or "BTCUSD" not in latest_plan.markets:
+            raise HTTPException(status_code=409, detail="Student requires a BTCUSD learning plan")
+        key_id = os.environ.get("ALPACA_PAPER_API_KEY_ID", "")
+        secret = os.environ.get("ALPACA_PAPER_API_SECRET_KEY", "")
+        expected = os.environ.get("ALPACA_PAPER_EXPECTED_ACCOUNT_ID", "")
+        if not (key_id and secret and expected):
+            return {
+                "student_id": student_id,
+                "instrument": "BTCUSD",
+                "configured": False,
+                "account_verified": False,
+                "broker_connected": False,
+                "paper_trading_enabled": False,
+                "live_trading_enabled": False,
+                "reason": "paper_credentials_not_configured",
+            }
+        try:
+            snapshot = preview_btc_paper(
+                key_id=key_id, secret_key=secret, expected_account_id=expected
+            )
+        except PaperPreviewError:
+            raise HTTPException(status_code=503, detail="BTC paper read-only verification failed") from None
+        return {
+            "student_id": student_id,
+            "instrument": "BTCUSD",
+            "configured": True,
+            "broker_connected": False,
+            **snapshot,
+        }
 
     @api.get("/v1/paper/readiness")
     def paper_readiness(_: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):

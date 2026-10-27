@@ -1,0 +1,64 @@
+name: Alpaca paper account connection check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-paper-account:
+    name: Verify read-only Alpaca paper API access
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      APCA_API_KEY_ID: ${{ secrets.APCA_API_KEY_ID }}
+      APCA_API_SECRET_KEY: ${{ secrets.APCA_API_SECRET_KEY }}
+    steps:
+      - name: Check paper account access (GET only)
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import sys
+          from urllib.error import HTTPError, URLError
+          from urllib.request import Request, urlopen
+
+          key_id = os.environ.get("APCA_API_KEY_ID", "")
+          secret_key = os.environ.get("APCA_API_SECRET_KEY", "")
+          if not key_id or not secret_key:
+              print("FAILED: One or both Alpaca paper API secrets are missing.")
+              sys.exit(1)
+
+          request = Request(
+              "https://paper-api.alpaca.markets/v2/account",
+              headers={
+                  "APCA-API-KEY-ID": key_id,
+                  "APCA-API-SECRET-KEY": secret_key,
+                  "Accept": "application/json",
+              },
+              method="GET",
+          )
+          try:
+              with urlopen(request, timeout=15) as response:
+                  if response.status != 200:
+                      print("FAILED: Paper API returned an unexpected HTTP status.")
+                      sys.exit(1)
+                  account = json.load(response)
+                  if not isinstance(account, dict) or not account.get("id"):
+                      print("FAILED: Paper API response did not include an account identifier.")
+                      sys.exit(1)
+          except HTTPError as error:
+              print(f"FAILED: Alpaca paper API rejected the request (HTTP {error.code}).")
+              sys.exit(1)
+          except (URLError, TimeoutError):
+              print("FAILED: Alpaca paper API connection error or timeout.")
+              sys.exit(1)
+          except (ValueError, KeyError):
+              print("FAILED: Alpaca paper API returned an unexpected response.")
+              sys.exit(1)
+
+          print("SUCCESS: Paper account credentials authenticate; read-only access verified.")
+          print("No orders placed; account ID, balance and API keys not printed.")
+          PY
