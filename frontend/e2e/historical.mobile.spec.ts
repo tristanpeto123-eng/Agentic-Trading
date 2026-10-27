@@ -51,5 +51,5 @@ test('iPhone Historical: import quarantined XAUUSD M15, inspect and play candles
   await page.getByLabel('Owner-supplied private file').check()
   await page.getByRole('button', { name: 'Validate & freeze dataset' }).click()
   await expect(page.getByText(/Import recorded: 2 bars/)).toBeVisible()
-  await expect(page.getByText(/USER_SUPPLIED_UNVERIFIED/).first()).toBeVisible()
+  await expect(page.locator('.dataset-row').filter({ hasText: 'USER_SUPPLIED_UNVERIFIED' }).first()).toBeVisible()
 })
