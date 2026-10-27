@@ -320,11 +320,12 @@ function DataEnginePanel() {
   const [showImport, setShowImport] = useState(false)
   const [importAvailable, setImportAvailable] = useState<boolean | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [ownerUnverified, setOwnerUnverified] = useState(true)
   const [provider, setProvider] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
   const [rights, setRights] = useState('')
   const [extractRef, setExtractRef] = useState('')
-  const [basis, setBasis] = useState<'bid'|'ask'|'mid'|'trade'>('mid')
+  const [basis, setBasis] = useState<'bid'|'ask'|'mid'|'trade'|'unknown'>('unknown')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -343,8 +344,11 @@ function DataEnginePanel() {
     try {
       const content = await selectedFile.text()
       const dataset = await api<HistoricalDataset>('/v1/datasets/import', 'POST', {
-        source: { provider, source_url: sourceUrl, rights_reference: rights,
-          extraction_reference: extractRef, acquired_at: new Date().toISOString(),
+        source: { provider: ownerUnverified ? 'USER_SUPPLIED_UNVERIFIED' : provider,
+          source_url: ownerUnverified ? null : sourceUrl,
+          rights_reference: ownerUnverified ? 'UNVERIFIED_OWNER_ARCHIVE' : rights,
+          extraction_reference: ownerUnverified ? 'Owner-provided ' + selectedFile.name : extractRef,
+          acquired_at: new Date().toISOString(),
           instrument: 'XAUUSD', timeframe: 'M15', price_basis: basis,
           timezone: 'UTC', evidence_kind: 'historical' }, csv_content: content
       })
@@ -357,18 +361,21 @@ function DataEnginePanel() {
     <div className="panel-heading"><div><p className="eyebrow">HISTORICAL DATA · SPRINT 02</p><h3>Data Engine</h3></div><button className="btn btn-secondary" disabled={importAvailable === false} onClick={() => setShowImport(!showImport)}><FileUp size={16}/>{showImport ? 'Close' : 'Import CSV'}</button></div>
     <div className="data-engine-content">
       {importAvailable === false && <p className="message-error">Import requires your persistent PostgreSQL connection. Check the Render DATABASE_URL environment variable; your existing students are not affected.</p>}
-      <p className="data-explainer">Import genuine XAUUSD M15 exports with source details. Every imported dataset is frozen, checked and <strong>quarantined</strong> until its provenance and usage rights are independently verified. No training or trading is enabled.</p>
+      <p className="data-explainer">Import XAUUSD M15 history, including private owner archives without a known provider URL. Every imported dataset remains <strong>quarantined</strong> until its origin and usage rights can be independently established. No automatic training, qualification or trading is enabled.</p>
       {notice && <p className="data-notice" role="status"><FileCheck2 size={15}/>{notice}</p>}
       {error && <p className="message-error" role="alert"><AlertCircle size={16}/>{error}</p>}
       {showImport && <form className="data-import-form" onSubmit={importData}>
-        <label>CSV file — UTC M15, timestamp_open/open/high/low/close[/volume]<input type="file" accept=".csv,text/csv" required onChange={e => setSelectedFile(e.target.files?.[0] ?? null)}/></label>
-        <label>Source provider<input value={provider} onChange={e=>setProvider(e.target.value)} required minLength={3} maxLength={120} placeholder="Provider name"/></label>
-        <label>Export or source URL (HTTPS)<input type="url" value={sourceUrl} onChange={e=>setSourceUrl(e.target.value)} required placeholder="https://provider.example/..."/></label>
-        <label>Export reference<input value={extractRef} onChange={e=>setExtractRef(e.target.value)} required minLength={3} placeholder="Broker download ID / export command"/></label>
-        <label>Usage rights reference<input value={rights} onChange={e=>setRights(e.target.value)} required minLength={8} placeholder="Provider licence or agreement reference"/></label>
-        <label>OHLC price convention<select value={basis} onChange={e=>setBasis(e.target.value as typeof basis)}><option value="mid">Mid</option><option value="bid">Bid</option><option value="ask">Ask</option><option value="trade">Trades</option></select></label>
+        <label>CSV file — UTC M15, time/open/high/low/close or timestamp_open/open/high/low/close<input type="file" accept=".csv,text/csv" required onChange={e => setSelectedFile(e.target.files?.[0] ?? null)}/></label>
+        <label className="owner-source-option"><input type="checkbox" checked={ownerUnverified} onChange={e=>setOwnerUnverified(e.target.checked)} /> Owner-supplied private file — source/licence not yet verified</label>
+        {!ownerUnverified && <>
+          <label>Source provider<input value={provider} onChange={e=>setProvider(e.target.value)} required minLength={3} maxLength={120} placeholder="Provider name"/></label>
+          <label>Export or source URL (HTTPS)<input type="url" value={sourceUrl} onChange={e=>setSourceUrl(e.target.value)} required placeholder="https://provider.example/..."/></label>
+          <label>Export reference<input value={extractRef} onChange={e=>setExtractRef(e.target.value)} required minLength={3} placeholder="Broker download ID / export command"/></label>
+          <label>Usage rights reference<input value={rights} onChange={e=>setRights(e.target.value)} required minLength={8} placeholder="Provider licence or agreement reference"/></label>
+        </>}
+        <label>OHLC price convention<select value={basis} onChange={e=>setBasis(e.target.value as typeof basis)}><option value="unknown">Unknown / not verified</option><option value="mid">Mid</option><option value="bid">Bid</option><option value="ask">Ask</option><option value="trade">Trades</option></select></label>
         <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Validating…' : 'Validate & freeze dataset'}</button>
-        <small>Maximum 12 MiB. Timestamps must be explicit UTC and bars must be closed. No missing prices are invented.</small>
+        <small>Maximum 12 MiB. UTC bars only. Potential bad ticks, price jumps and gaps remain flagged. A source label never certifies authenticity or legality.</small>
       </form>}
       <div className="dataset-list">{!datasets.length && <div className="dataset-empty"><Database size={18}/><span>No historical datasets imported yet.</span></div>}
         {datasets.map(d=><div className="dataset-row" key={d.id}><div className="dataset-summary"><strong>{d.instrument} · {d.timeframe}</strong><span>{d.provider} · {d.quality_report.rows.toLocaleString('en-GB')} bars · {d.quality_report.calendar_days.toFixed(1)} days</span><small>{d.quality_report.gap_count} detected gaps · SHA {d.source_hash.slice(0,12)}…</small></div><span className="pill pill-amber">Quarantined</span></div>)}
