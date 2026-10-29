@@ -120,4 +120,21 @@ export type AcademyState = { curriculum: { mode: Mode; plan_version: number; mar
 export type EvolutionState = { tree: { strategies: {id:string; family:string; version:number; market:string; tactic:string; parent_ids:string[]; dna_sha256:string; qualified:false}[] }; lessons: {id:string;source_student_id:string;skill_id:string;mentor_qualified:false}[]; mentor_status:{eligible:false;blocker:string}; qualification:'unqualified' }
 export type SentinelState = { status: 'research_safe'|'attention'|'blocked'; findings: {area:string;severity:string;reason:string}[]; safety: {locked:true;reason:string;paper_enabled:false;live_enabled:false}; research_data_verified:false }
 
+export type PaperAccountPosition = {
+  symbol: string; side: string; qty: string | null
+  market_value: string | null; unrealized_pl: string | null
+  avg_entry_price: string | null; current_price: string | null
+}
+export type PaperAccountSnapshot = {
+  configured: boolean; paper_api_readable: boolean; reason?: string
+  account_bound?: boolean; account_suffix?: string; account_status?: string
+  currency?: string; cash?: string | null; equity?: string | null
+  buying_power?: string | null; positions_count?: number
+  positions?: PaperAccountPosition[]; positions_truncated?: boolean
+  open_orders_count?: number; open_orders_count_capped?: boolean
+  as_of_utc?: string; paper_trading_enabled: false; live_trading_enabled: false
+  broker_order_execution_enabled?: false; student_order_execution_enabled?: false
+  note?: string
+}
+
 export type PaperReadiness = { ready:false; activation_allowed:false; paper_trading_enabled:false; live_trading_enabled:false; blockers:string[]; next_action:string }
