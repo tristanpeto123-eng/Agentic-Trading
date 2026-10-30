@@ -19,8 +19,10 @@ jobs:
         shell: bash
         run: |
           python - <<'PY'
+          import base64
           import json
           import os
+          import re
           import sys
           from urllib.error import HTTPError, URLError
           from urllib.request import Request, urlopen
@@ -69,7 +71,40 @@ jobs:
                       print("FAILED: Paper API response did not include an account identifier.")
                       sys.exit(1)
           except HTTPError as error:
-              print(f"FAILED: Alpaca paper API rejected the request (HTTP {error.code}).")
+              print(f"FAILED: Alpaca paper API rejected header authentication (HTTP {error.code}).")
+              # Alpaca support can trace requests using this non-credential reference.
+              request_id = error.headers.get("X-Request-ID", "")
+              if re.fullmatch(r"[A-Za-z0-9_-]{8,128}", request_id):
+                  print(f"Header request ID for Alpaca support: {request_id}")
+              if error.code == 401:
+                  # Distinct documented authentication method; same stored key pair.
+                  # Never print the header, credentials, account body or identifiers.
+                  print("DIAGNOSTIC: Retrying account GET using HTTP Basic authentication.")
+                  token = base64.b64encode(
+                      f"{key_id}:{secret_key}".encode("ascii")
+                  ).decode("ascii")
+                  alternate = Request(
+                      "https://paper-api.alpaca.markets/v2/account",
+                      headers={"Authorization": f"Basic {token}", "Accept": "application/json"},
+                      method="GET",
+                  )
+                  try:
+                      with urlopen(alternate, timeout=15) as second:
+                          body = json.load(second)
+                          if second.status == 200 and isinstance(body, dict) and body.get("id"):
+                              print("DIAGNOSTIC: Basic authentication succeeded, but key-header authentication failed.")
+                          else:
+                              print("DIAGNOSTIC: Basic authentication returned an unexpected response.")
+                  except HTTPError as secondary:
+                      print(f"DIAGNOSTIC: HTTP Basic authentication also rejected (HTTP {secondary.code}).")
+                      alternate_id = secondary.headers.get("X-Request-ID", "")
+                      if re.fullmatch(r"[A-Za-z0-9_-]{8,128}", alternate_id):
+                          print(f"Basic request ID for Alpaca support: {alternate_id}")
+                      if secondary.code == 401:
+                          print("Both supported authentication methods rejected this key pair. Verify its exact owning paper account with Alpaca.")
+                  except (URLError, TimeoutError, ValueError, KeyError):
+                      print("DIAGNOSTIC: Alternate method could not complete; check account association separately.")
+              # Fail closed even if Basic succeeds: normal integration uses key headers.
               sys.exit(1)
           except (URLError, TimeoutError):
               print("FAILED: Alpaca paper API connection error or timeout.")
