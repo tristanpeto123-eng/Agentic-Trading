@@ -32,6 +32,7 @@ from agentic_trading.evolution import student_evolution, peer_lessons, mentorshi
 from agentic_trading.sentinel import scan_health, engage_stop, safety_latch, SentinelError
 from agentic_trading.paper_readiness import evaluate_readiness, paper_requests, PaperReadinessError
 from agentic_trading.providers.alpaca_paper_readonly import preview_btc_paper, PaperPreviewError
+from agentic_trading.providers.alpaca_account_readonly import read_paper_account, PaperAccountReadError
 from agentic_trading.settings import Settings
 from agentic_trading.historical_store import DATABASE_ARTIFACT_PATH, store_historical_artifacts, verified_candles
 from agentic_trading.historical_demo import build_historical_demo
@@ -133,7 +134,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "independent_skill_mastery_enabled": False, "automatic_memory_ingest_enabled": False,
             "offline_neural_research_training_available": True, "automatic_training_enabled": False,
             "independent_examiner_enabled": False,
-            "offline_research_examiner_available": True, "academy_scheduler_available": True, "strategy_dna_read_enabled": True, "peer_research_lessons_enabled": True, "sentinel_read_enabled": True, "emergency_stop_enabled": True, "paper_readiness_report_enabled": True, "independent_examination_qualification_enabled": False,
+            "offline_research_examiner_available": True, "academy_scheduler_available": True, "strategy_dna_read_enabled": True, "peer_research_lessons_enabled": True, "sentinel_read_enabled": True, "emergency_stop_enabled": True, "paper_readiness_report_enabled": True, "paper_account_readonly_available": True, "independent_examination_qualification_enabled": False,
         }
 
     @api.post("/v1/auth/login")
@@ -474,6 +475,38 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "broker_connected": False,
             **snapshot,
         }
+
+    @api.get("/v1/paper/account")
+    def paper_account(response: Response, _: tuple[CEO, dict] = Depends(current_ceo)):
+        """CEO-only GET snapshot. GitHub Actions secrets are NOT backend runtime secrets."""
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Pragma"] = "no-cache"
+        # Never combine credentials from different env-var naming conventions.
+        key_id = os.environ.get("APCA_API_KEY_ID", "")
+        secret = os.environ.get("APCA_API_SECRET_KEY", "")
+        if not key_id and not secret:
+            key_id = os.environ.get("ALPACA_PAPER_API_KEY_ID", "")
+            secret = os.environ.get("ALPACA_PAPER_API_SECRET_KEY", "")
+        if not key_id or not secret:
+            return {
+                "configured": False,
+                "paper_api_readable": False,
+                "reason": "runtime_credentials_not_configured",
+                "paper_trading_enabled": False,
+                "live_trading_enabled": False,
+                "note": "Set paper credentials in the secured backend runtime; Actions secrets alone are insufficient.",
+            }
+        try:
+            return read_paper_account(
+                key_id=key_id, secret_key=secret,
+                expected_account_id=os.environ.get("ALPACA_PAPER_EXPECTED_ACCOUNT_ID", ""),
+            )
+        except PaperAccountReadError:
+            raise HTTPException(
+                status_code=503,
+                detail="Alpaca paper snapshot unavailable; verify runtime secrets and paper account binding.",
+                headers={"Cache-Control": "no-store"},
+            ) from None
 
     @api.get("/v1/paper/readiness")
     def paper_readiness(_: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):

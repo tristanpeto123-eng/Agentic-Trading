@@ -8,6 +8,7 @@ import { HistoricalDemoLab } from './HistoricalDemoLab'
 import { BrowserCsvReplay } from './BrowserCsvReplay'
 import { MarketStudy } from './MarketStudy'
 import { M15TradeScenario } from './M15TradeScenario'
+import PaperAccountPanel from './PaperAccountPanel'
 import './styles.css'
 
 const NUM_FORMAT = new Intl.NumberFormat('en-GB')
@@ -63,7 +64,7 @@ function Login({ onLogin }: { onLogin: (ceo: CEO) => void }) {
           {error && <p className="message-error" role="alert"><AlertCircle size={15} /> {error}</p>}
           <button className="btn btn-primary btn-wide" disabled={busy}>{busy ? 'Signing in…' : 'Access console'} <ArrowRight size={16}/></button>
         </form>
-        <div className="login-footer"><ShieldCheck size={15}/> Research only. No broker or trading is connected.</div>
+        <div className="login-footer"><ShieldCheck size={15}/> Research only. Paper and live order execution are disabled.</div>
       </div>
       <div className="login-bottom">Agentic Trading <span>·</span> Research environment v0.1</div>
     </div>
@@ -409,7 +410,7 @@ function HomePage({ dashboard, onNew, onStudents, onHistorical }: { dashboard: D
     { label: 'Qualified strategies', value: dashboard ? NUM_FORMAT.format(dashboard.research_qualified) : '—', icon: ShieldCheck, detail: 'Requires independent exams' },
     { label: 'System status', value: dashboard ? 'Online' : '—', icon: Activity, detail: 'API connection status' }]
   return <div className="page-enter"><Header title="Overview" description="Your research command centre. A clear view of what exists, what is learning and what needs your decision." action={<button className="btn btn-primary" onClick={onNew}><Plus size={17}/> New student</button>}/>
-    <div className="scope-banner"><span className="scope-dot"/><span><strong>Research environment</strong> · No market feed, broker account or trading permission is active.</span><span className="scope-stage">RESEARCH · S11</span></div>
+    <div className="scope-banner"><span className="scope-dot"/><span><strong>Research environment</strong> · No operational broker account or trading permission is active.</span><span className="scope-stage">RESEARCH · S11</span></div>
     <div className="metrics-grid">{rows.map(row => <div className="surface metric-card" key={row.label}><div className="metric-top"><span>{row.label}</span><row.icon size={19}/></div><strong>{row.value}</strong><small>{row.detail}</small></div>)}</div>
     <div className="dashboard-grid"><section className="surface panel overview-main"><div className="panel-heading"><div><p className="eyebrow">FINANCIAL PERFORMANCE</p><h3>Historical research</h3></div><span className="pill pill-blue"><Activity size={13}/> Replay ready</span></div><div className="scope-selector"><button className="historical-shortcut" type="button" onClick={onHistorical}>Historical <strong>REPLAY READY</strong> <ArrowRight size={14}/></button><span>Paper · LOCKED</span><span>Live · LOCKED</span></div><div className="blank-chart"><BarChart3 size={30} strokeWidth={1.2}/><strong>Historical research is available</strong><p>Replay historical candles or run the labelled synthetic engine demo with simulated trades and an equity chart. Verified real-market trading performance is not available.</p><button type="button" className="btn btn-secondary" onClick={onHistorical}>Open Historical replay <ArrowRight size={16}/></button><small>No verified real-market financial results exist; paper and live remain locked.</small></div></section>
       <div className="dashboard-aside"><section className="surface panel"><div className="panel-heading"><div><p className="eyebrow">ACTION CENTRE</p><h3>Needs attention</h3></div><span className="count-badge">{dashboard?.attention.length ?? 0}</span></div><div className="notice-list"><div className="notice-item"><div className="notice-icon"><Database size={17}/></div><div><strong>Historical data onboarding</strong><p>Import XAUUSD data and review quality; source verification is still required.</p><span>Research prerequisites</span></div><ChevronRight size={16}/></div></div></section><section className="surface panel quick-panel"><div className="panel-heading"><div><p className="eyebrow">ACADEMY</p><h3>Start building your cohort</h3></div><Users size={19}/></div><div className="panel-content"><p className="muted">Give your students identities and choose their learning direction before data and training come online.</p><button className="btn btn-secondary btn-wide" onClick={onStudents}>Open student academy <ArrowRight size={16}/></button></div></section></div></div>
@@ -474,7 +475,7 @@ function TradingPage() {
         <div className="surface small-status"><div className="small-status-top"><ClipboardList size={18}/><span>Trade journal</span></div><strong>Empty</strong><small>No operational trading activity</small></div>
         <div className="surface small-status"><div className="small-status-top"><ShieldCheck size={18}/><span>CEO permissions</span></div><strong>None granted</strong><small>No trading model deployed</small></div>
       </div>
-      {scope === 'paper' && <PaperReadinessPanel/>}
+      {scope === 'paper' && <><PaperAccountPanel/><PaperReadinessPanel/></>}
     </>}
   </div>
 }
