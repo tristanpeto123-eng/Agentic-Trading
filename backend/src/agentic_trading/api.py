@@ -37,6 +37,7 @@ from agentic_trading.settings import Settings
 from agentic_trading.historical_store import DATABASE_ARTIFACT_PATH, store_historical_artifacts, verified_candles
 from agentic_trading.historical_demo import build_historical_demo
 from agentic_trading.candle_study import study_candles, CandleStudyError
+from agentic_trading.m15_trade_scenario import study_costed_outcomes
 from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, new_session_factory
 
 
@@ -363,6 +364,41 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(status_code=409, detail=f"Historical research integrity gate: {exc}") from exc
         return {**report, "student_id": student.id, "plan_version": plan.version,
                 "quality_warning_count": len(dataset.quality_report.get("warnings", []))}
+
+    @api.get("/v1/students/{student_id}/m15-trade-scenario")
+    def m15_trade_scenario(student_id: str, dataset_id: str,
+                           _: tuple[CEO, dict] = Depends(current_ceo),
+                           session: Session = Depends(db)):
+        """Hypothetical *cost scenario* with strict CEO scope; NO order execution.
+
+        Reads only the referenced integrity-checked quarantined XAUUSD M15
+        archive. Does not write trade episodes, model weights, paper orders,
+        research qualification, audit decisions or approval records.
+        """
+        student = get_student_or_404(student_id, session)
+        plan = max(student.plans, key=lambda p: p.version)
+        if plan.mode == "directed" and "XAUUSD" not in plan.markets:
+            raise HTTPException(status_code=422, detail="XAUUSD outside student learning plan")
+        tactics = tuple(t for t in ("trend", "range", "breakout")
+                        if plan.mode == "autonomous" or t in plan.skills)
+        if not tactics:
+            raise HTTPException(status_code=422, detail="A trend/range/breakout target is required")
+        dataset = session.get(HistoricalDataset, dataset_id)
+        if dataset is None:
+            raise HTTPException(status_code=404, detail="Unknown imported dataset")
+        if (dataset.state != "quarantined" or
+            dataset.source_manifest.get("instrument") != "XAUUSD" or
+            dataset.source_manifest.get("timeframe") != "M15"):
+            raise HTTPException(status_code=409, detail="Requires a quarantined XAUUSD M15 archive")
+        try:
+            candles = verified_candles(session, dataset, data_root)
+            result = study_costed_outcomes(
+                candles, dataset_id=dataset.id, source_sha256=dataset.source_hash,
+                allowed_tactics=tactics)
+        except (DataQualityError, CandleStudyError, ValueError, OSError) as exc:
+            raise HTTPException(status_code=409, detail=f"Hypothetical M15 scenario blocked: {exc}") from exc
+        return {**result, "student_id": student.id, "plan_version": plan.version,
+                "source_description": "Owner-imported, execution price basis unverified"}
 
     @api.get("/v1/students/{student_id}/academy")
     def academy_status(student_id: str, _: tuple[CEO, dict] = Depends(current_ceo),
