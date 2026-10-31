@@ -73,7 +73,7 @@ def test_nanosecond_quote_timestamp_retained_and_spread_checked():
         "quotes": {"BTC/USD": [quote(), quote("2026-10-20T00:00:00.000000456Z")]},
         "next_page_token": None
     }])
-    result = fetch_private_btc_history(start=START, end=END, now=NOW, client=client,
+    result = fetch_private_btc_history(start=START, end=START+timedelta(minutes=5), now=NOW, client=client,
                                        kind="quotes", timeframe="quote", allow_network=True,
                                        private_research_acknowledged=True)
     assert result.report["records"] == 2
@@ -94,7 +94,8 @@ def test_invalid_records_and_wrong_instrument_fail_closed(bad_page, pattern):
     kind = "quotes" if "quotes" in bad_page else "bars"
     client, _ = client_from_pages([bad_page])
     with pytest.raises(CryptoDataError, match=pattern):
-        fetch_private_btc_history(start=START, end=END, now=NOW, client=client,
+        fetch_private_btc_history(start=START, end=START+timedelta(minutes=5) if kind == "quotes" else END,
+            now=NOW, client=client,
             kind=kind, timeframe="quote" if kind == "quotes" else "1Hour",
             allow_network=True, private_research_acknowledged=True)
 
