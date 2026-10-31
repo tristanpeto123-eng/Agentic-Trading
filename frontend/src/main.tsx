@@ -6,6 +6,7 @@ import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, Pla
 import { HistoricalResearch } from './HistoricalResearch'
 import { HistoricalDemoLab } from './HistoricalDemoLab'
 import { BrowserCsvReplay } from './BrowserCsvReplay'
+import { M1BidAskInspector } from './M1BidAskInspector'
 import { MarketStudy } from './MarketStudy'
 import { M15TradeScenario } from './M15TradeScenario'
 import PaperAccountPanel from './PaperAccountPanel'
@@ -460,6 +461,7 @@ function TradingPage() {
     {scope === 'historical' ? <>
       <HistoricalDemoLab/>
       <BrowserCsvReplay/>
+      <M1BidAskInspector/>
       <HistoricalResearch/>
       <DataEnginePanel/>
     </> : <>
