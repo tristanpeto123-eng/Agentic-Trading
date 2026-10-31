@@ -43,7 +43,7 @@ jobs:
           python-version: '3.11'
       - name: Install migration and PostgreSQL clients
         run: |
-          python -m pip install -e './backend[dev,postgres]'
+          python -m pip install -e './backend[dev,postgres]' 'numpy>=1.26,<3'
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client
       - name: Migrate and seed only dummy CI data
