@@ -233,3 +233,24 @@ class PaperPilotRequest(Base):
     payload_sha256: Mapped[str] = mapped_column(String(64),unique=True,nullable=False)
     status: Mapped[str] = mapped_column(String(40),nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),nullable=False)
+
+
+class ResearchPolicyCandidate(Base):
+    """Immutable proposed policy version, without any activation authority.
+
+    Each row is an audit checkpoint produced from verified TRAIN episodes.
+    A proposal is never an active strategy, qualification, or broker permission.
+    """
+    __tablename__ = "research_policy_candidates"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    student_id: Mapped[str] = mapped_column(String(36), ForeignKey("students.id"), nullable=False)
+    market: Mapped[str] = mapped_column(String(16), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    candidate_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    state: Mapped[str] = mapped_column(String(40), nullable=False, default="awaiting_independent_validation")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    __table_args__ = (
+        Index("ix_policy_student_market_version", "student_id", "market", "version", unique=True),
+        Index("ix_policy_candidate_hash", "candidate_sha256", unique=True),
+    )
