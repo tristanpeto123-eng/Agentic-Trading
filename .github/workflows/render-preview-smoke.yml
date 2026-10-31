@@ -53,6 +53,22 @@ jobs:
               assert caps[key] is False, f"Unsafe preview capability: {key}={caps[key]}"
           assert caps["historical_candle_replay_enabled"] is True
           assert caps["research_data_qualified"] is False
+          # Public route inventory is safe to fetch without any user credentials.
+          # Fail if a broker or financial order-writing endpoint appears by mistake.
+          code, body, headers = get("/openapi.json")
+          assert code == 200, f"API route inventory unavailable: {code}"
+          spec = json.loads(body)
+          assert isinstance(spec.get("paths"), dict), "Missing API path map"
+          for path, methods in spec["paths"].items():
+              for method in methods:
+                  if method.lower() in {"post", "put", "patch", "delete"} and (
+                      "/orders" in path or "/broker" in path
+                  ):
+                      raise AssertionError(f"Unexpected broker/order mutation route: {method} {path}")
+          for private_path in ("/v1/paper/readiness", "/v1/paper/account"):
+              code, body, headers = get(private_path)
+              assert code == 401, f"Protected paper API exposed: {private_path}: {code}"
+          # No outbound POST or broker request is made by this smoke test.
           # PostgreSQL-backed uploads may be enabled, but never imply qualification or orders.
           print("Render preview: CEO access protected, candle replay available, financial trading locked.")
           PY
