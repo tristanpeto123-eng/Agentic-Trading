@@ -1,23 +1,44 @@
-# Sprint Tracker (PDCA)
+# Sprint Tracker (PDCA) — current main-branch status
 
-Source of truth: `docs/PRODUCT_SPEC_v1.0.md` Sprint Backlog. No sprint complete until independently checked and demonstrated.
+Updated 31 October 2026 against GitHub `main`. Historical review paragraphs below
+describe individual implementation gates when they were proposed; those original
+draft-PR statuses must not be read as the current merge state.
 
-| Sprint | Deliverable | Status |
-|---|---|---|
-| S0 | Contracts, policy and research architecture | **Implemented and verified** |
-| S1 | CEO identity, named students and mobile app shell | **Merged to main** |
-| S2 | Historical XAUUSD ingestion and as-of context | **Draft PR #2; real data rights/verification outstanding** |
-| S3 | Conservative quote-based historical simulator | **Draft PR #3; synthetic test evidence only** |
-| S4 | Scout A, Strategist, Scout B and Guardian baseline | **Draft PR #4; offline research only** |
-| S5 | Versioned skills and Good/Bad memory | **Draft PR #5; research memories only** |
-| S6 | Neural training and recoverable checkpoints | **Draft PR #7; mobile CI dependency fix under verification** |
-| S7 | Independent numeric Examiner | **Draft PR #8; no qualification authority; CI fix under verification** |
-| S8 | Autonomous Academy research scheduling | **Draft PR #9; fixture-only worker and durable queue, CI passed** |
-| S9 | Strategy evolution and peer research lessons | **Draft PR #10; mentorship unqualified, CI passed** |
-| S10 | CEO Sentinel and safety latch | **Draft PR #11; research safety only, latest CI passed** |
-| S11 | Paper pilot readiness | **Draft PR #12; preflight gate only, no pilot or execution, CI passed** |
+The owner-approved product specification is the source of functional requirements.
+Green CI shows engineering regressions pass, **not profitable trading or
+independent evidence qualification**. Paper and live order execution remain disabled.
 
-**Review status (26 October 2026):** S2–S11 are stacked draft PRs, not merged or independently accepted for production. Sprint 6 also has an obsolete alternate PR #6; use PR #7 as the canonical S6 implementation. No licensed verified XAUUSD dataset, independent model qualification, paper broker, deployment approval or live broker integration. See the sprint-specific Checker records below.
+| Sprint | Delivered research foundation | GitHub `main` status | Unresolved evidence |
+|---|---|---|---|
+| S0 | Contracts, policy and research architecture | **Merged** | Production release requirements |
+| S1 | CEO identity, named students, mobile app | **Merged** | Hosted security and recovery validation |
+| S2 | Historical XAUUSD ingestion and time-safe context | **Merged** | Real provider rights, authentic ≥12 months |
+| S3 | Conservative bid/ask historical replay engine | **Merged** | Authentic replay source and independent fills |
+| S4 | Scout, Strategist and Guardian research pipeline | **Merged** | Out-of-sample efficacy |
+| S5 | Versioned skills and Good/Bad closed-trade memory | **Merged** | Genuine trade evidence |
+| S6 | Offline neural trainer and checksum checkpoints | **Merged** | Robust independent model validation |
+| S7 | Provisional independent Examiner | **Merged** | Real unseen holdout; independent model-generated signals |
+| S8 | Bounded research Academy jobs | **Merged** | Production-grade autonomous curriculum |
+| S9 | Strategy DNA and peer research lessons | **Merged** | Improved out-of-sample returns |
+| S10 | Sentinel and CEO stop latch | **Merged** | Production order-risk integration/recovery |
+| S11 | Paper-readiness register and blocked review helper | **Merged** | No paper pilot or execution approval |
+| S12A | Read-only Alpaca paper account/positions panel | **Merged** (PR #26) | Hosted runtime authentication/binding check |
+| Post-S11 | Cost scenario lab and Alpaca authentication diagnostics | **Merged** (PRs #25/#24) | Costed scenarios are hypothetical; no trade authority |
+
+**Hosted preview:** the Render `agentic-trading-iphone-preview-2026` service
+has a reported *live* S12A build from commit `d0b8c2b` (29 October).
+On 31 October, GitHub `main` is `991050b` (30 October).
+A green GitHub preview smoke test does not itself prove that Render is deployed
+at the same SHA. Confirm the deployment SHA and server health before claiming
+the latest build is live.
+
+**95% milestone:** see [RELEASE_95_PLAN.md](RELEASE_95_PLAN.md).
+This target is **research evaluation readiness**, not successful investment
+performance, real or paper trading authority. Issue #18 tracks independent
+post-S11 market-data and qualification gates. Missing evidence is never
+automatically treated as completed work.
+
+---
 
 ## Sprint 0 — PDCA
 
