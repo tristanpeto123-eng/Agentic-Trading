@@ -26,6 +26,7 @@ test('iPhone Academy uses a saved XAUUSD dataset for five-batch progression', as
     lines.push(`${dt},${p.toFixed(4)},${(p + 1).toFixed(4)},${(p - 1).toFixed(4)},${(p + 0.2).toFixed(4)}`)
   }
   await page.locator('nav.bottom-nav').getByRole('button', { name: 'Trading' }).click()
+  await page.getByText('Advanced tools · saved data, M1 quotes & engine demonstrations').click()
   await page.getByRole('button', { name: 'Import CSV' }).click()
   await page.locator('.data-import-form input[type="file"]').setInputFiles({
     name: 'academy-ci-m15.csv', mimeType: 'text/csv', buffer: Buffer.from(lines.join('\n') + '\n')
