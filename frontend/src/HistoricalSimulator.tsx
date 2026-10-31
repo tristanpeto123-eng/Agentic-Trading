@@ -306,7 +306,7 @@ export function HistoricalSimulator({ students }: { students: Student[] }) {
           </div>) : <p className="muted">No BUY or SELL signal yet. Step forward or select Next decision.</p>}
         </div>}
       </>}
-      <div className="historical-warning"><ShieldAlert size={15}/> In baseline mode, trade outcomes use unverified M15 prices and illustrative costs, not real fills. In Student agent trace mode, Scout/Strategist use the authentic deterministic S4 code but Scout B has no independent model, Guardian does not approve intents and there is no neural signal. Neither mode sends orders, changes students or trains models.</div>
+      <div className="historical-warning"><ShieldAlert size={15}/> In baseline mode, trade outcomes use unverified M15 prices and illustrative costs, not real fills. In Student agent trace mode, Scout/Strategist use the authentic deterministic S4 code but Scout B has no independent model, Guardian does not approve intents and there is no neural signal. Neither mode sends orders, changes students, trains models or writes NO student training memories.</div>
     </div>
   </section>
 }
