@@ -22,7 +22,9 @@ def write(path, *, ask=False, gaps=(), crossed_open=False, slope="0.25"):
             op += Decimal("0.6")
         if crossed_open and ask and i == 12:
             op -= Decimal("2")
-        cl = op + Decimal("0.1")
+        # Keep closing ASK positive while deliberately crossing only OPEN.
+        cl = (Decimal("4000") + Decimal(str(i)) * Decimal(slope)
+              + (Decimal("0.6") if ask else Decimal("0")) + Decimal("0.1"))
         high = max(op, cl) + Decimal("0.2")
         low = min(op, cl) - Decimal("0.2")
         stamp = (START + timedelta(minutes=i)).isoformat()
