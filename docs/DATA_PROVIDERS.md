@@ -1,13 +1,30 @@
-# Historical XAUUSD Data — Sprint 2 Provider Shortlist
+# Market data sources — private research qualification
 
-**No provider is connected and no market prices have been imported.**
+Updated 31 October 2026. This is a status register, not a blanket licence
+clearance or permission to enable paper/live trading.
 
-| Candidate | Potential route | Before choosing |
-|---|---|---|
-| MetaTrader 5 via a licensed broker | Historical bars/tick feed | Account access, history coverage, bid/ask conventions and research usage rights |
-| OANDA | Broker candle API if XAU/USD available for the account and region | Verify instrument access, spreads/ticks, rights and rate limits |
-| Dukascopy | Historic tick or candle records | Verify gold instrument, precision, data gaps and licensing |
+| Market | Source | Verified technical capability | Licence and qualification status |
+|---|---|---|---|
+| BTC/USD | Alpaca crypto history API | Connected account ACTIVE; daily/hourly bars and historical L1 quotes retrieved | Private/non-commercial research scope only; no commercial SaaS rights attested, no model qualified |
+| XAU/USD | Owner-supplied 28 Oct M1 BID+ASK exports | Structural audit and hypothetical local replay only | One day; origin, permitted use and execution-grade history not independently verified |
+| XAU/USD | OANDA v20 candles | Official API documents price=BA and M1; account-specific access not established | API agreement/UK access and cloud/AI/commercial permissions under enquiry |
+| XAU/USD | FXCM bespoke historical prices | Supplier advertises historical FX/CFD bid/ask | Written tick history, price, private ML and later SaaS licence requested |
+| XAU/USD | Dukascopy example adapter | Code can decode provider M1 .bi5 files | Automated acquisition NOT authorised here; disable until written consent |
 
-S2 selection gate: verify at least 12 months target coverage of XAUUSD M15, completed H1/H4 context and preferably M1/tick execution evidence; timestamps, price conventions, sessions, costs and source data hash.
+Read docs/ALPACA_BTC_PRIVATE_RESEARCH.md, docs/M1_BID_ASK_AUDIT.md,
+docs/M1_QUOTE_SIDE_REPLAY.md and docs/RELEASE_95_PLAN.md before treating
+any source as qualified.
 
-Never silently invent missing price data. Synthetic examples may test software but never qualify trading profits.
+## Mandatory restrictions
+
+- Do not commit raw vendor quotes, credentials, downloaded data or private
+  source manifests to this public repository.
+- **Quote-midpoint crypto candles are not executable fills.** Use genuinely
+  paired bid/ask inputs for cost-sensitive research; preserve gaps.
+- A provider name, URL, API success, owner-export filename or SHA digest does
+  not independently establish acquisition rights or market authenticity.
+- Respect each supplier's rate limits, retention rules and terms; cloud storage
+  and commercial training use are separate permission questions.
+- Never promote a student, certify profitability, enable paper/live orders or
+  allow capital allocation based on unverified data. Explicit CEO approval
+  remains a separate release gate.
