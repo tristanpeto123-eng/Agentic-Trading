@@ -5,6 +5,26 @@
 with an iPhone CEO console. This is **not** 95% of a licensed, profitable or
 paper/live trading business. No student may place broker orders under this plan.
 
+## Owner scope decision — research first (31 October 2026)
+
+**Current product objective:** refine a private, non-commercial research tool for
+one owner. No commercial product, subscription, paid client, shared market-data
+service, or SaaS launch is in scope. Commercialization is a possible *future*
+project only after this tool has been developed, independently evaluated and
+explicitly reauthorized by the CEO.
+
+Work now should prioritize historical data integrity, private storage, the
+student learning-to-replay evidence chain, sealed forward tests, transparent
+negative results and the iPhone research console. Provider enquiries about
+future commercial terms are exploratory and **do not change current scope**.
+
+Non-commercial intent is NOT a data licence. Each provider's terms must still
+permit the proposed acquisition, storage location, retention, model training
+and processing. Do not redistribute market quotes or upload vendor source data
+to public GitHub. Paper execution and live trading each require separate,
+explicit CEO approval and independent safeguards; neither is inferred from
+this research-first scope.
+
 ## Definition of 95% and current state
 
 The baseline is **13 of 20 individually verifiable acceptance gates = 65%**.
