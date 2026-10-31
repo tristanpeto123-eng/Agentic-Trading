@@ -34,3 +34,34 @@ def test_fail_closed_on_small_or_unsorted_data():
         split_chronological(rows, embargo_bars=10, minimum_per_fold=100)
     with pytest.raises(ValueError, match="positive"):
         split_chronological(candles(), embargo_bars=0)
+
+
+@pytest.mark.parametrize(("field", "value"), [
+    ("open", "NaN"),
+    ("high", "inf"),
+    ("close", "-1"),
+    ("low", "4100"),
+    ("high", "3000"),
+    ("volume", "-5"),
+    ("volume", "NaN"),
+])
+def test_rejects_corrupt_ohlc_and_volume_in_sealed_test_partition(field, value):
+    bars = candles(1000)
+    setattr(bars[-1], field, value)
+    with pytest.raises(ValueError, match="Invalid candle at index 999"):
+        split_chronological(bars, embargo_bars=10, minimum_per_fold=100)
+
+
+def test_rejects_naive_timestamps_in_the_test_partition():
+    bars = candles(1000)
+    bars[-1].open_time = bars[-1].open_time.replace(tzinfo=None)
+    with pytest.raises(ValueError, match="Invalid candle at index 999"):
+        split_chronological(bars, embargo_bars=10, minimum_per_fold=100)
+
+
+def test_valid_zero_volume_and_missing_volume_are_allowed():
+    bars = candles(1000)
+    bars[-1].volume = "0"
+    result = split_chronological(bars, embargo_bars=10, minimum_per_fold=100)
+    assert result.research_only is True
+    assert result.qualified is False
