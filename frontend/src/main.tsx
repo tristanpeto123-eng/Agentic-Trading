@@ -5,6 +5,7 @@ import { api, APIError, MARKETS, SKILLS, setCsrf } from './api'
 import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, PlanInput, Skill, Student, StudentInput, StudentSkillProgress, StudentMemory, StudentTrainingHistory, StudentExamHistory, AcademyState, EvolutionState, SentinelState, PaperReadiness, Tab, TradingMode } from './api'
 import { HistoricalResearch } from './HistoricalResearch'
 import { HistoricalDemoLab } from './HistoricalDemoLab'
+import { HistoricalSimulator } from './HistoricalSimulator'
 import { BrowserCsvReplay } from './BrowserCsvReplay'
 import { M1BidAskInspector } from './M1BidAskInspector'
 import { MarketStudy } from './MarketStudy'
@@ -444,14 +445,14 @@ function PaperReadinessPanel() {
       <small className="muted">{state.next_action}</small></>}
   </div></section>
 }
-function TradingPage() {
+function TradingPage({ students }: { students: Student[] }) {
   const [scope, setScope] = useState<TradingMode>('historical')
   const details = {
     paper: { heading: 'Paper trading is disabled', intro: 'Pilot readiness has been evaluated, but independent data verification and CEO activation are still required.', next: 'Review the pre-flight blockers below' },
     live: { heading: 'Live trading is disabled', intro: 'Real-money trading remains outside this programme until separate readiness checks and exact CEO approval.', next: 'Not scheduled in current sprints' },
   }
   return <div className="page-enter">
-    <Header title="Trading" description="Try the synthetic simulator or replay your own M15 candles locally. Paper and live remain locked."/>
+    <Header title="Trading" description="Load a historical archive, replay it candle by candle and inspect each research decision. Paper and live remain locked."/>
     <div className="trading-switch" role="tablist" aria-label="Trading environment">
       {(['historical','paper','live'] as const).map(m => <button key={m} role="tab"
         aria-selected={scope === m} className={scope === m ? 'active' : ''} onClick={() => setScope(m)}>
@@ -459,11 +460,17 @@ function TradingPage() {
       </button>)}
     </div>
     {scope === 'historical' ? <>
-      <HistoricalDemoLab/>
-      <BrowserCsvReplay/>
-      <M1BidAskInspector/>
-      <HistoricalResearch/>
-      <DataEnginePanel/>
+      <HistoricalSimulator students={students}/>
+      <details className="sim-advanced">
+        <summary>Advanced tools · saved data, M1 quotes & engine demonstrations</summary>
+        <div className="sim-advanced-content">
+          <DataEnginePanel/>
+          <HistoricalResearch/>
+          <M1BidAskInspector/>
+          <BrowserCsvReplay/>
+          <HistoricalDemoLab/>
+        </div>
+      </details>
     </> : <>
       <div className="surface trading-placeholder">
         <div className="trading-disabled-icon"><ShieldOff size={29}/></div>
@@ -538,7 +545,7 @@ function App() {
         {banner && <div className="message-success" role="status"><Check size={17}/>{banner}<button onClick={() => setBanner('')} aria-label="Dismiss"><X size={16}/></button></div>}
         {tab === 'home' && <HomePage dashboard={dashboard} onNew={() => setCreating(true)} onStudents={() => navigate('students')} onHistorical={() => navigate('trading')}/>}
         {tab === 'students' && (activeStudent ? <StudentProfile student={activeStudent} onBack={() => setActiveStudent(null)} onEdit={() => setEditing(true)}/> : <StudentsPage students={students} onNew={() => setCreating(true)} onOpen={id => void openStudent(id)}/>)}
-        {tab === 'trading' && <TradingPage/>}
+        {tab === 'trading' && <TradingPage students={students}/>}
       </main>
       <nav className="bottom-nav" aria-label="Mobile navigation">{nav.map(n => <button key={n.id} className={tab === n.id ? 'active' : ''} onClick={() => navigate(n.id)}><n.icon size={21} strokeWidth={tab === n.id ? 2.2 : 1.7}/><span>{n.label}</span></button>)}</nav>
     </div>
