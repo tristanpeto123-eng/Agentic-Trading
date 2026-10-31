@@ -216,7 +216,7 @@ export function HistoricalSimulator({ students }: { students: Student[] }) {
             </select>
             <button className="btn btn-secondary" disabled={!selectedSaved || busy} onClick={() => void loadSaved()}>Load saved <ArrowRight size={14}/></button>
           </div>}
-          <small className="muted">CSV columns: timestamp_open (or time), open, high, low, close [,volume]. UTC, 15-minute candles. Device files stay in this browser session.</small>
+          <small className="muted">CSV columns: timestamp_open (or time), open, high, low, close [,volume]. UTC M15. Fixed-rule replay stays on your device; Agent trace sends short candle windows to your authenticated server for read-only analysis (not saved).</small>
         </div></div>
         <div className="sim-step"><span className="sim-step-number">2</span><div className="sim-step-main">
           <h4>Choose who and how to evaluate</h4>
@@ -224,7 +224,7 @@ export function HistoricalSimulator({ students }: { students: Student[] }) {
             <label>Student context
               <select aria-label="Simulation student" value={studentId} onChange={e => { setPlaying(false); setStudentId(e.target.value); setDecisionEngine(e.target.value ? 'agents' : 'baseline') }}>
                 <option value="">Research baseline · no student</option>
-                {students.map(student => <option key={student.id} value={student.id}>{student.name} · profile only</option>)}
+                {students.map(student => <option key={student.id} value={student.id}>{student.name} · research identity</option>)}
               </select>
             </label>
             <label>Decision engine
