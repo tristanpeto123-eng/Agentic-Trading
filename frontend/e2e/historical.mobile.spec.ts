@@ -12,6 +12,7 @@ test('iPhone Historical: import quarantined XAUUSD M15, inspect and play candles
   await page.getByRole('button', { name: 'Access console' }).click()
   await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible()
   await page.locator('nav.bottom-nav').getByRole('button', { name: 'Trading' }).click()
+  await page.getByText('Advanced tools · saved data, M1 quotes & engine demonstrations').click()
   await expect(page.getByRole('heading', { name: 'Candle Replay' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Import CSV' }).click()
