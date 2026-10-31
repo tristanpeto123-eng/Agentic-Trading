@@ -18,7 +18,7 @@ test('mobile CEO login, student lifecycle, and disabled trading', async ({ page 
   await expect(page.getByText(/No operational broker account or trading permission is active/)).toBeVisible()
   await expect(page.getByText('Historical research is available')).toBeVisible()
   await page.getByRole('button', { name: 'Open Historical replay' }).click()
-  await expect(page.getByRole('heading', { name: 'Trade and P&L replay' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Historical Simulation' })).toBeVisible()
   await page.locator('nav.bottom-nav').getByRole('button', { name: 'Home' }).click()
   await page.screenshot({ path: 'screenshots/01-home-mobile.png', fullPage: true })
 
@@ -58,6 +58,7 @@ test('mobile CEO login, student lifecycle, and disabled trading', async ({ page 
 
   await nav.getByRole('button', { name: 'Trading' }).click()
   await expect(page.getByRole('heading', { name: 'Trading', exact: true })).toBeVisible()
+  await page.getByText('Advanced tools · saved data, M1 quotes & engine demonstrations').click()
   await expect(page.getByRole('heading', { name: 'Candle Replay' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Trade and P&L replay' })).toBeVisible()
   await page.getByRole('button', { name: 'Run historical demo' }).click()
