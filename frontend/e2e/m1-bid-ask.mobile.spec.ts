@@ -56,8 +56,12 @@ test('iPhone M1 BID/ASK refuses nonmatching and crossed opening quotes', async (
   await expect(page.getByRole('alert')).toContainText('do not contain any matching')
   await page.getByLabel('ASK · M1 CSV').setInputFiles({
     name: 'ci-crossed-ask.csv', mimeType: 'text/csv',
-    buffer: Buffer.from(m1Csv('ask').replace('4000.6,4001.6,3999.6,4000.8,300',
-      '3999,4002,3998,4000.8,300')),
+    buffer: Buffer.from(m1Csv('ask').split('\n').map((line, index) => {
+      if (index !== 1) return line
+      const fields = line.split(',')
+      fields[1] = '3999'; fields[2] = '4002'; fields[3] = '3998'
+      return fields.join(',')
+    }).join('\n')),
   })
   await page.getByRole('button', { name: 'Inspect M1 pair locally' }).click()
   await expect(page.getByRole('alert')).toContainText('Crossed or non-positive opening')
