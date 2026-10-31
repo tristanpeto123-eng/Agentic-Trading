@@ -279,7 +279,7 @@ export function HistoricalSimulator({ students }: { students: Student[] }) {
           <p>{current.reason}</p>
           <div className="sim-detail-grid">
             <span>Policy: <strong>{selectedRule}</strong></span>
-            <span>Guardian data check: <strong>{current.guard}</strong></span>
+            <span>Data guard: <strong>{current.guard}</strong></span>
             <span>Time: <strong>{stamp(current.time)}</strong></span>
           </div>
           {current.action !== 'WAIT' && <p className="sim-note">Signal observed at this completed candle close. Illustrative entry is the NEXT candle's recorded open, and exit its close. It cannot know that next-bar result yet.</p>}
@@ -292,7 +292,7 @@ export function HistoricalSimulator({ students }: { students: Student[] }) {
           </div>) : <p className="muted">No BUY or SELL signal yet. Step forward or select Next decision.</p>}
         </div>
       </>}
-      <div className="historical-warning"><ShieldAlert size={15}/> This is a **rule-based replay**, not a trained neural model or approved trading bot. P&amp;L uses unverified M15 open/close prices and assumed fixed costs, with no real quotes, broker fills, stops, latency, margin or funding. It sends NO orders and writes NO student training memories.</div>
+      <div className="historical-warning"><ShieldAlert size={15}/> This is a rule-based replay, not a trained neural model or approved trading bot. P&amp;L uses unverified M15 open/close prices and assumed fixed costs, with no real quotes, broker fills, stops, latency, margin or funding. It sends NO orders and writes NO student training memories.</div>
     </div>
   </section>
 }
