@@ -39,6 +39,7 @@ from agentic_trading.historical_store import DATABASE_ARTIFACT_PATH, store_histo
 from agentic_trading.historical_demo import build_historical_demo
 from agentic_trading.candle_study import study_candles, CandleStudyError
 from agentic_trading.m15_trade_scenario import study_costed_outcomes
+from agentic_trading.research_trace import TraceBatchInput, inspect_trace_batch
 from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, new_session_factory
 
 
@@ -345,6 +346,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "note": "Independent offline research comparisons are provisional. Dataset rights and holdout independence are not certified."}
         except ExaminationError as exc:
             raise HTTPException(status_code=409, detail=f"Exam integrity check failed: {exc}") from exc
+
+    @api.post("/v1/research/decision-trace")
+    def research_trace(payload: TraceBatchInput, response: Response,
+                       user: CEO = Depends(require_csrf),
+                       session: Session = Depends(db)):
+        """Owner-only bounded read-only analysis, no broker or stored model changes.
+
+        POST transports private user-supplied OHLC values (not a state mutation).
+        The inputs remain UNVERIFIED even when a student has a saved learning plan.
+        """
+        student = get_student_or_404(str(payload.student_id), session)
+        plan = max(student.plans, key=lambda p: p.version)
+        if plan.mode == "directed" and "XAUUSD" not in plan.markets:
+            raise HTTPException(status_code=409, detail="XAUUSD outside student learning plan")
+        approved = ({"trend", "range", "breakout"} if plan.mode == "autonomous" else
+                    set(plan.skills) & {"trend", "range", "breakout"})
+        if not approved:
+            raise HTTPException(status_code=409, detail="Student needs an XAUUSD trend/range/breakout research target")
+        response.headers["Cache-Control"] = "no-store"
+        return inspect_trace_batch(payload, permitted_skills=approved)
 
     @api.get("/v1/students/{student_id}/candle-study")
     def candle_study(student_id: str, dataset_id: str | None = None,
