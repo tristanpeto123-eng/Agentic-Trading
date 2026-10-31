@@ -1,6 +1,6 @@
 # Sprint 12 (phase A): read-only Alpaca Paper Account dashboard
 
-**Implementation status:** Draft pull request for review, not an authorised trading rollout.
+**Implementation status (31 October 2026):** PR #26 merged to `main` on 29 October and the read-only account panel was included in a live Render preview deployment. This is **not** an authorised trading rollout. Runtime paper API authentication/account binding must be checked separately; GitHub Actions secrets do not automatically configure Render.
 
 ## Scope
 
