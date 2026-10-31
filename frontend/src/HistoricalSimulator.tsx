@@ -253,7 +253,7 @@ export function HistoricalSimulator({ students }: { students: Student[] }) {
       {!!bars.length && (decisionEngine === 'agents' ? Boolean(chosen) : Boolean(selectedRule)) && <>
         <div className="sim-loaded"><strong>{source}</strong><span>{bars.length.toLocaleString('en-GB')} completed candles · {gaps} gaps · unverified archive</span></div>
         {truncated && <p className="sim-note">Displaying the latest {bars.length.toLocaleString('en-GB')} saved candles. For the full historical archive, select its original CSV from Files.</p>}
-        {decisionEngine === 'baseline' ? <div className="sim-dashboard">
+        {decisionEngine === 'baseline' ? <><div className="sim-dashboard">
           <div><span>Candle</span><strong>{(cursor + 1).toLocaleString('en-GB')} / {bars.length.toLocaleString('en-GB')}</strong></div>
           <div><span>Decisions to trade</span><strong>{decisions.slice(0, cursor + 1).filter(d => d.action !== 'WAIT').length}</strong></div>
           <div><span>Closed hypothetical outcomes</span><strong>{visibleTrades.length}</strong></div>
