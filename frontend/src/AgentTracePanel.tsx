@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Candle } from './HistoricalResearch'
 import { api } from './api'
+import './AgentTracePanel.css'
 
 export type TraceObservation = {
   index: number
