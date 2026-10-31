@@ -1,8 +1,8 @@
 # Agentic Trading
 
-Independent, research-first academy for named AI trading students. **Sprints 0–11 are merged into `main` for source-code evaluation.** The app includes a CEO dashboard, named students, historical import and offline simulation, research intelligence, skill/memory history, experimental neural training, a provisional Examiner, research Academy, strategy evolution, Sentinel and paper-readiness reporting. **This is not a deployed web service or a qualified trading system.** Historical imports remain quarantined until independently verified; no broker, paper or live order execution is available.
+Independent, research-first academy for named AI trading students. **Sprints 0–11 are merged into `main` for source-code evaluation.** The app includes a CEO dashboard, named students, historical import and offline simulation, research intelligence, skill/memory history, experimental neural training, a provisional Examiner, research Academy, strategy evolution, Sentinel and paper-readiness reporting. **A CEO-authenticated, research-only iPhone preview is hosted on Render, but the system is not a qualified trading service.** Historical imports remain quarantined until independently verified; no broker, paper or live order execution is available.
 
-**The GitHub repository is public by the owner's choice. Source code is public; the CEO interface is password-protected and is not deployed. Never commit credentials, account data, student private histories or market-data purchases.**
+**The GitHub repository is public by the owner's choice. Source code is public; the CEO interface is password-protected and its research-only preview is hosted separately on Render. Never commit credentials, account data, student private histories or purchased market data.**
 
 ## Evaluate the merged research build locally
 
@@ -130,3 +130,9 @@ CEO-readable paper readiness reports explicitly enumerate missing licence, data,
 5. **Tests:** run `python -m pytest backend/tests -q` and `cd frontend && npm run build` to re-check backend and frontend locally. Latest GitHub CI status is visible under the repository's Actions tab.
 
 For the completed engineering review, see [S0–S11 Programme Review](docs/PROGRAM_END_REVIEW.md). For deployed access from another device, a **separate secured preview deployment** would be needed; do not expose this development server publicly.
+
+## Director's 95% research milestone (31 October 2026)
+
+See [the 20-gate evidence-based release plan](docs/RELEASE_95_PLAN.md) and the [current sprint tracker](docs/SPRINTS.md). The initial engineering-planning baseline is 13/20 verified gates (65%); reaching at least 19/20 requires authenticated provider rights, genuine execution data, sealed independent model evaluation, five-batch policy updates, and an approved-current-SHA deployment. This is **not** a trading-performance or paper/live release metric.
+
+The secured iPhone preview is at https://agentic-trading-iphone-preview-2026.onrender.com. Its reported deployed commit can lag behind GitHub `main`; verify the actual Render deployment ID before declaring parity. Alpaca is **read-only** and all order execution remains disabled.

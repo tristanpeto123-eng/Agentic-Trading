@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from hashlib import sha256
 import json
+from math import isfinite
 from typing import Iterable
 
 from agentic_trading.contracts.common import require_utc
@@ -60,16 +61,30 @@ def split_chronological(
         raise ValueError("Not enough rows to retain 3 folds after embargo")
     previous: datetime | None = None
     canonical = []
-    for candle in rows:
-        stamp = getattr(candle, "open_time")
-        require_utc(stamp)
-        if previous is not None and stamp <= previous:
-            raise ValueError("Input candles must be strictly chronological")
+    for index, candle in enumerate(rows):
+        try:
+            stamp = getattr(candle, "open_time")
+            require_utc(stamp)
+            if previous is not None and stamp <= previous:
+                raise ValueError("Input candles must be strictly chronological")
+            raw = tuple(getattr(candle, field) for field in ("open", "high", "low", "close"))
+            op, hi, lo, cl = (float(value) for value in raw)
+            if not all(isfinite(value) and value > 0 for value in (op, hi, lo, cl)):
+                raise ValueError("Prices must be finite and strictly positive")
+            if lo > hi or lo > min(op, cl) or hi < max(op, cl):
+                raise ValueError("Invalid OHLC bounds")
+            volume = getattr(candle, "volume", None)
+            if volume is not None:
+                numeric_volume = float(volume)
+                if not isfinite(numeric_volume) or numeric_volume < 0:
+                    raise ValueError("Volume must be finite and non-negative")
+        except (AttributeError, TypeError, ValueError, OverflowError) as exc:
+            raise ValueError(f"Invalid candle at index {index}: {exc}") from exc
         previous = stamp
         canonical.append([
             stamp.isoformat(),
-            *(str(getattr(candle, key)) for key in ("open", "high", "low", "close")),
-            str(getattr(candle, "volume", None)),
+            *(str(value) for value in raw),
+            str(volume),
         ])
     source_sha = sha256(json.dumps(canonical, separators=(",", ":")).encode()).hexdigest()
     manifest = {
