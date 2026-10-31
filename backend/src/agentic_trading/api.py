@@ -28,6 +28,7 @@ from agentic_trading.skills_memory import catalog_manifest, read_student_memory,
 from agentic_trading.neural_training import student_training_runs, TrainingError
 from agentic_trading.examiner import student_exam_history, ExaminationError
 from agentic_trading.academy import lesson_plan, student_jobs, AcademyError
+from agentic_trading.policy_checkpoint import research_policy_history, PolicyResearchError
 from agentic_trading.evolution import student_evolution, peer_lessons, mentorship_eligibility, EvolutionError
 from agentic_trading.sentinel import scan_health, engage_stop, safety_latch, SentinelError
 from agentic_trading.paper_readiness import evaluate_readiness, paper_requests, PaperReadinessError
@@ -314,6 +315,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "note": "Offline neural research only; development loss is not independent proof."}
         except TrainingError as exc:
             raise HTTPException(status_code=409, detail=f"Training integrity check failed: {exc}") from exc
+
+    @api.get("/v1/students/{student_id}/policy-candidates")
+    def policy_candidates(student_id: str, response: Response,
+                          _: tuple[CEO, dict] = Depends(current_ceo),
+                          session: Session = Depends(db)):
+        """Audit-only student policy candidate history; never activates a version."""
+        get_student_or_404(student_id, session)
+        response.headers["Cache-Control"] = "no-store"
+        try:
+            return {"student_id": student_id,
+                    "candidates": research_policy_history(session, student_id),
+                    "qualification": "unqualified",
+                    "automatic_policy_activation_enabled": False,
+                    "paper_trading_enabled": False, "live_trading_enabled": False,
+                    "note": "Five-batch research suggestions only; independent validation and rollback are required."}
+        except PolicyResearchError as exc:
+            raise HTTPException(status_code=409, detail=f"Policy checkpoint integrity check failed: {exc}") from exc
 
     @api.get("/v1/students/{student_id}/exams")
     def exam_history(student_id: str, limit: int = 20, _: tuple[CEO, dict] = Depends(current_ceo),
