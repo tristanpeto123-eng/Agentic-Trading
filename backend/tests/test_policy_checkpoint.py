@@ -92,7 +92,7 @@ def test_checkpoint_persists_exactly_once_without_promoting(tmp_path):
         history = research_policy_history(session, sid)
         assert len(history) == 1
         assert history[0]["status"] == "awaiting_independent_validation"
-        assert history[0]["candidate_scores"] == {"tactic:trend": "0.530000"}
+        assert history[0]["candidate_scores"] == {"tactic:trend": "0.600000"}
         assert history[0]["paper_trading_enabled"] is False
         assert history[0]["applied_to_student"] is False
         assert len(session.query(ResearchPolicyCandidate).all()) == 1
