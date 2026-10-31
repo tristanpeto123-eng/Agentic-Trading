@@ -152,3 +152,41 @@ def test_not_an_api_or_an_active_order_strategy(tmp_path):
         assert c.state == "awaiting_independent_validation"
         assert not any(s.status == "trading" for s in session.query(Student))
     engine.dispose()
+
+
+def test_ceo_policy_history_read_only_and_authenticated(tmp_path):
+    from fastapi.testclient import TestClient
+    from agentic_trading.api import create_app
+    from agentic_trading.auth import password_hash
+    from agentic_trading.settings import Settings
+    from agentic_trading.storage import CEO
+
+    engine, factory, sid, _ = setup(tmp_path)
+    with factory() as session:
+        session.add(CEO(email="owner@example.org",
+                        password_hash=password_hash("long-local-test-password")))
+        batches = seeded_batches(session, sid)
+        checkpoint_five_batches(
+            session, student_id=sid, market="XAUUSD", batches=batches,
+            as_of=START + timedelta(days=6),
+        )
+    client = TestClient(create_app(Settings(
+        database_url=f"sqlite:///{tmp_path / 'policy.sqlite3'}",
+        secret_key="R" * 48,
+    )))
+    url = f"/v1/students/{sid}/policy-candidates"
+    assert client.get(url).status_code == 401
+    assert client.post(url, json={}).status_code in (401, 405)
+    login = client.post("/v1/auth/login", json={
+        "email": "owner@example.org", "password": "long-local-test-password",
+    })
+    assert login.status_code == 200
+    result = client.get(url)
+    assert result.status_code == 200
+    assert result.headers["cache-control"] == "no-store"
+    data = result.json()
+    assert len(data["candidates"]) == 1
+    assert data["automatic_policy_activation_enabled"] is False
+    assert data["paper_trading_enabled"] is False
+    assert client.post(url, json={}).status_code == 405
+    engine.dispose()
