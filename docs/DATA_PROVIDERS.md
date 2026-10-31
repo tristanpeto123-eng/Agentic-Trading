@@ -3,6 +3,12 @@
 Updated 31 October 2026. This is a status register, not a blanket licence
 clearance or permission to enable paper/live trading.
 
+**Owner scope:** private, non-commercial, one-owner research only until a refined
+research application is complete and independently evaluated. Commercial SaaS
+licensing and customer-facing features are explicitly deferred. Future-use
+questions already sent to suppliers are exploratory, not a launch mandate.
+This does not waive provider terms on private data storage or AI training.
+
 | Market | Source | Verified technical capability | Licence and qualification status |
 |---|---|---|---|
 | BTC/USD | Alpaca crypto history API | Connected account ACTIVE; daily/hourly bars and historical L1 quotes retrieved | Private/non-commercial research scope only; no commercial SaaS rights attested, no model qualified |
