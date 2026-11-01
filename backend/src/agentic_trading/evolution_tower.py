@@ -239,7 +239,7 @@ def advance_state(state: dict) -> tuple[dict,list[dict]]:
     for i,item in enumerate(ranked):
         result=item["metrics"]["selection"]
         if i>=keep_count or result["risk_breached"]:
-            removed.append({**item,"floor":0,"status":"archived",
+            removed.append({**item,"from_floor":item["floor"],"floor":0,"status":"archived",
                             "reason":result["death_reason"] or "SELECTION"})
         else:
             kept.append({**item,"floor":_floor(result,i),
@@ -259,7 +259,7 @@ def advance_state(state: dict) -> tuple[dict,list[dict]]:
                 "total_born":state["total_born"]+len(births),
                 "total_culled":state["total_culled"]+len(removed)}
     events=[{"type":"GENERATION_EVALUATED","generation":gen,"kept_ids":[x["id"] for x in kept],
-             "removed":[{"id":r["id"],"from_floor":r["floor"],"reason":r["reason"],
+             "removed":[{"id":r["id"],"from_floor":r["from_floor"],"reason":r["reason"],
                          "selection":r["metrics"]["selection"]} for r in removed],
              "born":[{"id":b["id"],"parent_id":b["parent_id"]} for b in births],
              "source_kind":"SYNTHETIC_RANDOM_WALK_ONLY",
