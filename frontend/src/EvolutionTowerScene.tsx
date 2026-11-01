@@ -9,7 +9,7 @@ export type TowerMetric = {
 }
 export type TowerAgent = {
   id:string; generation:number; parent_id:string|null; genome_sha256:string
-  status:string; floor:number; metrics:null|{
+  status:string; floor:number; assessments?:number; probation_streak?:number; metrics:null|{
     training:TowerMetric; selection:TowerMetric; source_kind:string
     slice_b_sha256:string; slice_c_sha256:string
   }
@@ -24,7 +24,8 @@ const CENTRE = FLOOR_COUNT*HEIGHT*.5
 
 const tone = (agent:TowerAgent) =>
   agent.status==='research_leader'?0xf3be70:
-  agent.status==='nursery'?0x86c5fb:0x65e2b6
+  agent.status==='nursery'?0x86c5fb:
+  agent.status==='probation'?0xe49a64:0x65e2b6
 
 export function EvolutionTowerScene({agents, events, selectedId, onSelect}:{
   agents:TowerAgent[];events:TowerEvent[];selectedId:string|null

@@ -32,11 +32,21 @@ are visualisations of saved events, not trading actions.
   synthetic overnight charge (0.8 bps per 96 bars). These are not actual CFD
   quotes or broker fills. Margin exposure is limited to 0.5x equity by immutable
   application logic. The hard drawdown kill threshold is 20%.
-- A bounded fitness objective combines toy net return, maximum drawdown, a
-  Sortino-style downside proxy and a trade-count penalty. The best half by
-  selection-tape fitness can survive; failed/risk-breached competitors are
-  archived. Children inherit real parent chromosomes with Gaussian perturbation,
-  receive new immutable content hashes and start at the nursery.
+- A bounded fitness objective combines simulated net return, maximum
+  drawdown, a Sortino-style downside proxy and a trade-count penalty.
+  **No compulsory 50% cull:** any agent below the highest-ranked half may
+  survive if it respects risk limits. An agent breaching the hard 20% drawdown
+  threshold retires immediately. Unprofitable or inactive agents accrue a
+  probation streak; after 3 consecutive assessments at most 2 probationary
+  agents are retired per generation. Poor performers may remain longer if
+  the cap has been reached. One mutated child is born per retired agent, from
+  a positive-return/positive-fitness active survivor where available;
+  otherwise a fresh random genome is used. Existing chromosomes and
+  historical archive IDs remain intact.
+- Assessments of the SAME frozen historical B bars are **not independent market
+  evidence**. The historical C slice is diagnostic; final D remains withheld.
+  A bot's survival or 3 successful assessments never grants qualifications.
+  Browser auto-evolve advances at most once per 10 seconds while the tab is open.
 - Floors represent a relative *toy simulation* rank. No bot is placed above
   Floor 49 and the Penthouse remains locked; no simulated strategy is promoted
   to a qualified champion, demo broker or live broker. A flat baseline earns

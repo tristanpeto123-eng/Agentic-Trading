@@ -82,3 +82,8 @@
   .evo-source-switch select,.evo-source-switch button{width:100%}
   .evo-disclaimer{font-size:12px;padding:15px;line-height:1.55}
 }
+
+.evo-dot.probation{background:#e49a64}
+.evo-mini-bot.probation{background:#493527;color:#f3b481}
+.evo-agent-row:has(.evo-mini-bot.probation) .evo-agent-copy small{color:#f3b481}
+.evo-event.safe{background:#132e30;color:#9dd6ca;border-top-color:#315b58}

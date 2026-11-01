@@ -15,6 +15,8 @@ from typing import Any
 
 POPULATION = 16
 GENERATION_LIMIT = 100
+PROBATION_ASSESSMENTS = 3  # Three replays; NOT three independent market samples.
+MAX_PROBATION_RETIREMENTS = 2  # Normal turnover is gradual, never compulsory.
 GENES = 6 * 8 + 8 + 8 * 4 + 4
 START_EQUITY = 1000.0
 MAX_DRAWDOWN = 0.20
@@ -180,7 +182,7 @@ def _new_genes(rng: random.Random) -> list[float]:
 
 
 def _floor(result: dict, rank: int) -> int:
-    # This is a synthetic research visual rank, never independent evidence.
+    # Relative research-floor rank, never independent validation or permission.
     if result["risk_breached"]:
         return 0
     if (result["return_pct"] <= 0 or result["drawdown_pct"] > 12
@@ -221,7 +223,8 @@ def initial_state(seed: int=20261101, count: int=POPULATION) -> dict:
         genes=_new_genes(rng)
         agents.append({"id":f"ATL-G0-{i+1:03d}","generation":0,"parent_id":None,
                        "genes":genes,"genome_sha256":_digest(genes),"status":"nursery",
-                       "floor":1,"metrics":None})
+                       "floor":1,"metrics":None,
+                       "assessments":0,"probation_streak":0})
     return {"schema":"atl_evolution_tower.v1","seed":seed,"generation":0,
             "population":agents,"total_born":count,"total_culled":0,
             "mode":"SYNTHETIC_ONLY","independent_exam":False,
@@ -245,38 +248,75 @@ def advance_state(state: dict) -> tuple[dict,list[dict]]:
     selection_key = "training" if state.get("real_data") else "selection"
     ranked.sort(key=lambda a:(a["metrics"][selection_key]["risk_breached"],
                               -a["metrics"][selection_key]["fitness"],a["id"]))
-    # Keep up to half; evict risk failures as well. Never elect a real champion.
-    keep_count=len(ranked)//2
-    kept=[]
-    removed=[]
+    # Survival is determined by absolute outcomes, not percentile ranking.
+    # Risk failures exit immediately. Unprofitable/inactive agents receive
+    # several assessments on the SAME data (not independent confirmation).
+    # Limit non-risk retirements per generation to avoid a mass nursery purge.
+    probation_candidates = []
+    for item in ranked:
+        result = item["metrics"][selection_key]
+        weak = (result["trades"] == 0 or result["return_pct"] <= -0.05
+                or (result["return_pct"] <= 0 and result["fitness"] < 0))
+        streak = (item.get("probation_streak", 0) + 1) if weak else 0
+        item["assessments"] = item.get("assessments", 0) + 1
+        item["probation_streak"] = streak
+        if not result["risk_breached"] and streak >= PROBATION_ASSESSMENTS:
+            probation_candidates.append(item)
+    probation_candidates.sort(key=lambda x: (
+        -x["probation_streak"], x["metrics"][selection_key]["fitness"], x["id"]))
+    retiring = {x["id"] for x in probation_candidates[:MAX_PROBATION_RETIREMENTS]}
+    kept, removed = [], []
     for i,item in enumerate(ranked):
-        result=item["metrics"][selection_key]
-        if i>=keep_count or result["risk_breached"]:
-            removed.append({**item,"from_floor":item["floor"],"floor":0,"status":"archived",
-                            "reason":result["death_reason"] or "SELECTION"})
-        else:
-            kept.append({**item,"floor":_floor(result,i),
-                         "status":"research_leader" if i==0 else "competing"})
+        result = item["metrics"][selection_key]
+        if result["risk_breached"] or item["id"] in retiring:
+            if result["risk_breached"]:
+                reason = result["death_reason"] or "RISK_LIMIT_OR_MARGIN"
+            elif result["trades"] == 0:
+                reason = "INACTIVE_AFTER_PROBATION"
+            else:
+                reason = "PERSISTENT_UNPROFITABLE"
+            removed.append({**item, "from_floor":item["floor"], "floor":0,
+                            "status":"archived", "reason":reason})
+            continue
+        promising = (result["return_pct"] > 0 and result["fitness"] > 0
+                     and result["closed_trades"] >= 2
+                     and result["drawdown_pct"] <= 12)
+        kept.append({**item, "floor":_floor(result,i),
+                     "status":("probation" if item["probation_streak"] else
+                               "research_leader" if promising and i == 0 else
+                               "competing")})
+    # Replacement happens only when a genuine vacancy opens.
+    # Breeding from a losing or non-trading parent would reinforce the failure.
     rng=random.Random(state["seed"]+gen*10007)
-    parents=kept or ranked[:2]
+    parents=[x for x in kept if x["metrics"][selection_key]["return_pct"]>0
+             and x["metrics"][selection_key]["fitness"]>0
+             and x["metrics"][selection_key]["closed_trades"]>=2]
     births=[]
     for slot in range(len(ranked)-len(kept)):
-        parent=parents[slot%len(parents)]
-        mutated=[round(max(-3,min(3,g+rng.gauss(0,0.06))),8) for g in parent["genes"]]
+        parent=parents[slot%len(parents)] if parents else None
+        mutated=([round(max(-3,min(3,g+rng.gauss(0,0.06))),8)
+                  for g in parent["genes"]] if parent else _new_genes(rng))
         child={"id":f"ATL-G{gen}-{slot+1:03d}","generation":gen,
-               "parent_id":parent["id"],"genes":mutated,
-               "genome_sha256":_digest(mutated),"floor":1,
-               "status":"nursery","metrics":None}
+               "parent_id":parent["id"] if parent else None,
+               "genes":mutated,"genome_sha256":_digest(mutated),
+               "floor":1, "status":"nursery", "metrics":None,
+               "assessments":0, "probation_streak":0}
         births.append(child)
     next_state={**state,"generation":gen,"population":kept+births,
                 "real_generation":(state.get("real_generation",0)+1 if state.get("real_data") else None),
                 "total_born":state["total_born"]+len(births),
-                "total_culled":state["total_culled"]+len(removed)}
+                "total_culled":state["total_culled"]+len(removed),
+                "survival_policy":"MERIT_AND_PROBATION_V2"}
     events=[{"type":"GENERATION_EVALUATED","generation":gen,"kept_ids":[x["id"] for x in kept],
              "removed":[{"id":r["id"],"from_floor":r["from_floor"],"reason":r["reason"],
                          "selection":r["metrics"][selection_key]} for r in removed],
              "born":[{"id":b["id"],"parent_id":b["parent_id"]} for b in births],
-             "source_kind":"SYNTHETIC_RANDOM_WALK_ONLY",
+             "source_kind":("REAL_XAUUSD_BID_ASK_RESEARCH_UNQUALIFIED" if state.get("real_data")
+                            else "SYNTHETIC_RANDOM_WALK_ONLY"),
+             "survival_policy":"MERIT_AND_PROBATION_V2",
+             "probation_after":PROBATION_ASSESSMENTS,
+             "max_nonrisk_retirements":MAX_PROBATION_RETIREMENTS,
+             "probation_count":sum(a["status"]=="probation" for a in kept),
              "selection_is_not_validation":True,
              "ranking_source":selection_key,
              "source_sha256":state.get("real_data",{}).get("source_sha256")}]
@@ -299,7 +339,8 @@ def activate_real_history(state: dict, snapshot: dict) -> tuple[dict, list[dict]
         raise TowerError("Generation limit leaves no room to activate real history")
     real_data = validated_research_snapshot(snapshot)
     next_generation = state["generation"] + 1
-    population = [{**agent, "metrics":None, "floor":1, "status":"nursery"}
+    population = [{**agent, "metrics":None, "floor":1, "status":"nursery",
+                   "assessments":0, "probation_streak":0}
                   for agent in state["population"]]
     next_state = {**state, "generation":next_generation,
                   "real_generation":0, "real_data":real_data,
