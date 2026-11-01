@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 from collections import defaultdict, deque
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from pathlib import Path
 import os
+import json
 import time
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
@@ -34,6 +35,7 @@ from agentic_trading.sentinel import scan_health, engage_stop, safety_latch, Sen
 from agentic_trading.paper_readiness import evaluate_readiness, paper_requests, PaperReadinessError
 from agentic_trading.providers.alpaca_paper_readonly import preview_btc_paper, PaperPreviewError
 from agentic_trading.providers.alpaca_account_readonly import read_paper_account, PaperAccountReadError
+from agentic_trading.providers.alpaca_crypto_history import fetch_private_btc_history, CryptoDataError
 from agentic_trading.settings import Settings
 from agentic_trading.historical_store import DATABASE_ARTIFACT_PATH, store_historical_artifacts, verified_candles
 from agentic_trading.historical_demo import build_historical_demo
@@ -188,6 +190,136 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def historical_demo(_: tuple[CEO, dict] = Depends(current_ceo)):
         """Offline fixture replay only: no orders placed and no qualified market evidence."""
         return build_historical_demo()
+
+    @api.get("/v1/research/market-history")
+    def research_market_history(days: int = 14, response: Response = None,
+                                _: tuple[CEO, dict] = Depends(current_ceo)):
+        """Import fully completed BTC/USD M15 candles using public, GET-only Alpaca data.
+
+        No broker account credentials or orders, training, database writes,
+        model advancement or qualification. User requested private research import.
+        """
+        if days not in (7, 14, 30):
+            raise HTTPException(status_code=422, detail="Choose 7, 14 or 30 days")
+        instant = datetime.now(timezone.utc)
+        end = instant.replace(minute=(instant.minute // 15) * 15,
+                              second=0, microsecond=0)
+        try:
+            snapshot = fetch_private_btc_history(
+                start=end - timedelta(days=days), end=end,
+                now=instant, timeframe="15Min", kind="bars",
+                allow_network=True, private_research_acknowledged=True,
+            )
+            values = [json.loads(line) for line in snapshot.canonical_jsonl.splitlines()]
+            if len(values) < 80:
+                raise CryptoDataError("Insufficient completed BTC/USD M15 bars")
+            output = []
+            previous = None
+            gaps = 0
+            for row in values:
+                dt = parse_iso_utc(row["t"])
+                if previous is not None and dt - previous != timedelta(minutes=15):
+                    gaps += 1
+                previous = dt
+                output.append({
+                    "open_time": dt.isoformat().replace("+00:00", "Z"),
+                    "available_at": (dt + timedelta(minutes=15)).isoformat().replace("+00:00", "Z"),
+                    "open": row["o"], "high": row["h"], "low": row["l"],
+                    "close": row["c"], "volume": row["v"],
+                })
+        except (CryptoDataError, DataQualityError, ValueError, KeyError, TypeError):
+            raise HTTPException(status_code=503, detail="Alpaca historical feed unavailable or failed data integrity checks") from None
+        response.headers["Cache-Control"] = "no-store"
+        return {
+            "symbol": "BTCUSD", "market": "BTC/USD", "timeframe": "M15",
+            "provider": "Alpaca public crypto bars",
+            "source_url": snapshot.report["source_endpoint"],
+            "source_sha256": snapshot.report["canonical_sha256"],
+            "bars": output, "gap_count": gaps, "rows": len(output),
+            "source_verified": False, "price_basis": "aggregate",
+            "research_eligible": False, "historical_execution_enabled": False,
+            "paper_trading_enabled": False, "live_trading_enabled": False,
+            "persisted": False, "model_training_performed": False,
+            "note": "Private research-only imported BTC M15 aggregates. Not saved, broker fills, executable quotes, neural training or approved trading. Provider conditions still apply.",
+        }
+
+    @api.get("/v1/students/{student_id}/train-data")
+    def student_training_source(student_id: str, response: Response,
+                                _: tuple[CEO, dict] = Depends(current_ceo),
+                                session: Session = Depends(db)):
+        """Choose student market and import research-only history on button press.
+
+        This supplies candle-by-candle training *simulation* inputs, not
+        S6 neural examples or broker orders. No database or student writes.
+        """
+        student = get_student_or_404(student_id, session)
+        plan = max(student.plans, key=lambda item: item.version)
+        targets = list(plan.markets) if plan.mode == "directed" else ["XAUUSD", "BTCUSD"]
+        if "XAUUSD" in targets:
+            rows = session.scalars(select(HistoricalDataset).order_by(
+                HistoricalDataset.ingested_at.desc())).all()
+            for source in rows:
+                if (source.state == "quarantined" and
+                    source.source_manifest.get("instrument") == "XAUUSD" and
+                    source.source_manifest.get("timeframe") == "M15"):
+                    try:
+                        candles = [x for x in verified_candles(session, source, data_root)
+                                   if x.available_at <= datetime.now(timezone.utc)]
+                    except (DataQualityError, OSError, ValueError):
+                        raise HTTPException(status_code=409, detail="Saved XAUUSD history failed integrity verification") from None
+                    if len(candles) >= 80:
+                        bars = [x.as_dict() for x in candles[-2016:]]
+                        response.headers["Cache-Control"] = "no-store"
+                        return {
+                            "student_id": student_id, "market": "XAUUSD",
+                            "provider": source.source_manifest.get("provider", "Owner archive"),
+                            "source_sha256": source.canonical_hash,
+                            "bars": bars,
+                            "gap_count": sum(parse_iso_utc(b["open_time"])-parse_iso_utc(a["open_time"]) != timedelta(minutes=15)
+                                              for a,b in zip(bars, bars[1:])),
+                            "source_verified": False, "training_kind": "historical_policy_replay",
+                            "neural_training_performed": False,
+                            "persisted": False, "paper_trading_enabled": False, "live_trading_enabled": False,
+                            "note": "Automatically selected existing owner archive; no executable quote or model qualification.",
+                        }
+        if "BTCUSD" in targets:
+            instant = datetime.now(timezone.utc)
+            end = instant.replace(minute=(instant.minute // 15) * 15,
+                                  second=0, microsecond=0)
+            try:
+                snapshot = fetch_private_btc_history(
+                    start=end - timedelta(days=14), end=end,
+                    now=instant, timeframe="15Min", kind="bars",
+                    allow_network=True, private_research_acknowledged=True)
+                records = [json.loads(line) for line in snapshot.canonical_jsonl.splitlines()]
+                if len(records) < 80:
+                    raise CryptoDataError("Insufficient public BTC history")
+                bars = [
+                    {"open_time": parse_iso_utc(row["t"]).isoformat().replace("+00:00", "Z"),
+                     "available_at": (parse_iso_utc(row["t"]) + timedelta(minutes=15)).isoformat().replace("+00:00", "Z"),
+                     "open": row["o"], "high": row["h"], "low": row["l"],
+                     "close": row["c"], "volume": row["v"]}
+                    for row in records
+                ]
+            except (CryptoDataError, ValueError, KeyError, TypeError):
+                raise HTTPException(status_code=503, detail="BTC/USD historical feed unavailable; research training cannot start") from None
+            response.headers["Cache-Control"] = "no-store"
+            return {
+                "student_id": student_id, "market": "BTCUSD",
+                "provider": "Alpaca public historical crypto bars",
+                "source_sha256": snapshot.report["canonical_sha256"],
+                "bars": bars,
+                "gap_count": sum(parse_iso_utc(b["open_time"])-parse_iso_utc(a["open_time"]) != timedelta(minutes=15)
+                                  for a,b in zip(bars, bars[1:])),
+                "source_verified": False, "training_kind": "historical_policy_replay",
+                "neural_training_performed": False,
+                "persisted": False, "paper_trading_enabled": False, "live_trading_enabled": False,
+                "note": "Public BTC aggregates; some prices use quote midpoints. Hypothetical research, not qualified or executed trades.",
+            }
+        raise HTTPException(
+            status_code=409,
+            detail="No automatic historical feed available for this student's target market. XAUUSD requires an existing archived dataset; EURUSD, GBPUSD, indices require another research data source.",
+        )
 
     @api.get("/v1/datasets")
     def datasets(_: tuple[CEO, dict] = Depends(current_ceo), session: Session = Depends(db)):

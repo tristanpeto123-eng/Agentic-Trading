@@ -6,6 +6,7 @@ import type { CEO, Dashboard, HistoricalDataset, LearningPlan, Market, Mode, Pla
 import { HistoricalResearch } from './HistoricalResearch'
 import { HistoricalDemoLab } from './HistoricalDemoLab'
 import { HistoricalSimulator } from './HistoricalSimulator'
+import { StudentTrainingCockpit } from './StudentTrainingCockpit'
 import { BrowserCsvReplay } from './BrowserCsvReplay'
 import { M1BidAskInspector } from './M1BidAskInspector'
 import { MarketStudy } from './MarketStudy'
@@ -452,7 +453,9 @@ function TradingPage({ students }: { students: Student[] }) {
     live: { heading: 'Live trading is disabled', intro: 'Real-money trading remains outside this programme until separate readiness checks and exact CEO approval.', next: 'Not scheduled in current sprints' },
   }
   return <div className="page-enter">
-    <Header title="Trading" description="Load a historical archive, replay it candle by candle and inspect each research decision. Paper and live remain locked."/>
+    <Header title="Trading" description="Choose a student, press Train, and watch real historical research statistics update. Broker trading remains locked."/>
+    <StudentTrainingCockpit students={students}/>
+    <details className="sim-advanced"><summary>Advanced tools · historical replay, data & paper account</summary><div className="sim-advanced-content">
     <div className="trading-switch" role="tablist" aria-label="Trading environment">
       {(['historical','paper','live'] as const).map(m => <button key={m} role="tab"
         aria-selected={scope === m} className={scope === m ? 'active' : ''} onClick={() => setScope(m)}>
@@ -486,6 +489,7 @@ function TradingPage({ students }: { students: Student[] }) {
       </div>
       {scope === 'paper' && <><PaperAccountPanel/><PaperReadinessPanel/></>}
     </>}
+    </div></details>
   </div>
 }
 
