@@ -33,6 +33,7 @@ test('iPhone S4 research trace reports real regime, withheld Scout B, and no bro
   await dialog.getByRole('button', { name: 'Create student' }).click()
   await expect(page.getByRole('heading', { name })).toBeVisible()
   await page.locator('nav.bottom-nav').getByRole('button', { name: 'Trading' }).click()
+  await page.getByText('Advanced tools · historical replay, data & paper account').click()
   await page.getByLabel('Load M15 historical CSV').setInputFiles({
     name: 'trace-m15.csv', mimeType: 'text/csv', buffer: Buffer.from(trendCsv())
   })
