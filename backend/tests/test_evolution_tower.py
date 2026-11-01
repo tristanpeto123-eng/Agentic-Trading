@@ -1,6 +1,7 @@
 """Research-only Evolution Tower: actual saved chromosomes, fixed risk, archive."""
 import copy
 from hashlib import sha256
+import agentic_trading.evolution_tower as tower
 
 import pytest
 from sqlalchemy import select
@@ -26,9 +27,12 @@ def test_generation_mutates_real_weights_and_preserves_archive_without_a_fake_ch
     assert first==second and events==again
     assert first["generation"]==1
     assert len(first["population"])==POPULATION
-    assert first["total_culled"]>=8
+    # Ranking does not impose a mandatory 50% purge.
+    assert first["total_culled"] <= POPULATION
+    assert events[0]["survival_policy"] == "MERIT_AND_PROBATION_V2"
+    assert len(events[0]["removed"]) == first["total_culled"]
     assert first["total_born"]==POPULATION+first["total_culled"]
-    assert events[0]["removed"] and events[0]["born"]
+    assert len(events[0]["removed"]) == len(events[0]["born"])
     assert len({a["id"] for a in first["population"]})==POPULATION
     old={a["id"]:a for a in state["population"]}
     for agent in first["population"]:
@@ -36,8 +40,9 @@ def test_generation_mutates_real_weights_and_preserves_archive_without_a_fake_ch
             assert agent["genes"]==old[agent["id"]]["genes"]
             assert agent["genome_sha256"]==old[agent["id"]]["genome_sha256"]
         else:
-            assert agent["parent_id"] in old
-            assert agent["genome_sha256"] != old[agent["parent_id"]]["genome_sha256"]
+            if agent["parent_id"] is not None:
+                assert agent["parent_id"] in old
+                assert agent["genome_sha256"] != old[agent["parent_id"]]["genome_sha256"]
         assert agent["floor"]<=49
     public=public_state(first,events)
     assert not public["champions"] and public["penthouse_locked"]
@@ -47,6 +52,78 @@ def test_generation_mutates_real_weights_and_preserves_archive_without_a_fake_ch
     assert first["mode"]=="SYNTHETIC_ONLY"
     assert first["paper_trading_enabled"] is False
     assert first["live_trading_enabled"] is False
+
+
+def _test_grade(genes, _generation, _real_data=None):
+    """Stable fake metrics to test selection policy separately from price replay."""
+    index=round(genes[0]*10)
+    if index == 15:
+        ret, trades, risk = -25., 2, True
+    elif index in (13,14):
+        ret, trades, risk = 0., 0, False
+    elif index in (11,12):
+        ret, trades, risk = -1., 4, False
+    else:
+        ret, trades, risk = 2., 4, False
+    metric={"return_pct":ret,"trades":trades,
+            "closed_trades":trades, "drawdown_pct":0 if ret>=0 else abs(ret),
+            "fitness":ret, "risk_breached":risk,
+            "death_reason":"RISK_LIMIT_OR_MARGIN" if risk else None}
+    return {"training":metric,"selection":metric,"source_kind":"SYNTHETIC_RANDOM_WALK_ONLY"}
+
+
+def test_merit_survival_no_compulsory_half_population_cull(monkeypatch):
+    monkeypatch.setattr(tower,"_grade",_test_grade)
+    state=initial_state(seed=55)
+    for i,agent in enumerate(state["population"]):
+        agent["genes"][0]=i/10
+        agent["genome_sha256"]=_digest(agent["genes"])
+    current,event=advance_state(state)
+    # One genuine risk breach, not eight forced selection deaths.
+    assert len(event[0]["removed"])==1
+    assert event[0]["removed"][0]["reason"]=="RISK_LIMIT_OR_MARGIN"
+    assert current["total_culled"]==1
+    assert len(current["population"])==16
+    assert all(a["id"] in {x["id"] for x in current["population"]}
+               for a in state["population"][:11])
+    assert current["population"][0]["assessments"]==1
+    assert sum(a["status"]=="probation" for a in current["population"])>=4
+    assert all(a["probation_streak"]==0 for a in current["population"]
+               if a["id"] in {x["id"] for x in state["population"][:11]})
+    # Inactivity and losing entries remain through assessments 1 and 2.
+    second,ev2=advance_state(current)
+    assert not any(a["reason"].startswith(("INACTIVE","PERSISTENT"))
+                   for a in ev2[0]["removed"])
+    third,ev3=advance_state(second)
+    nonrisk=[a for a in ev3[0]["removed"] if a["reason"]!="RISK_LIMIT_OR_MARGIN"]
+    assert 0<len(nonrisk)<=tower.MAX_PROBATION_RETIREMENTS
+    assert set(a["reason"] for a in nonrisk) <= {
+        "INACTIVE_AFTER_PROBATION","PERSISTENT_UNPROFITABLE"}
+    assert len(third["population"])==16
+    assert len({a["id"] for a in third["population"]})==16
+    assert all(a["floor"]<=49 for a in third["population"])
+    assert public_state(third,ev3)["champions"]==[]
+
+
+def test_every_profitable_bot_survives_even_with_low_rank(monkeypatch):
+    def grade(genes,gen,real=None):
+        n=round(genes[0]*10)
+        score=.01+(.002*n)
+        m={"return_pct":score,"fitness":score,"trades":2,"closed_trades":2,
+           "drawdown_pct":1.,"risk_breached":False,"death_reason":None}
+        return {"training":m,"selection":m,"source_kind":"SYNTHETIC_RANDOM_WALK_ONLY"}
+    monkeypatch.setattr(tower,"_grade",grade)
+    state=initial_state()
+    for i,a in enumerate(state["population"]):
+        a["genes"][0]=i/10
+        a["genome_sha256"]=_digest(a["genes"])
+    for _ in range(4):
+        state,events=advance_state(state)
+        assert len(events[0]["removed"])==0
+        assert len(events[0]["born"])==0
+        assert len(state["population"])==16
+        assert state["total_culled"]==0
+    assert all(a["assessments"]==4 for a in state["population"])
 
 
 def test_fitness_includes_friction_and_bounded_risk_with_no_external_data():
@@ -103,7 +180,7 @@ def test_api_requires_ceo_csrf_persists_restart_and_audits_every_generation(tmp_
     result=step.json()
     assert result["generation"]==1
     assert result["state_sha256"]!=cohort["state_sha256"]
-    assert result["last_events"][0]["removed"]
+    assert result["last_events"][0]["survival_policy"] == "MERIT_AND_PROBATION_V2"
     assert client.post("/v1/evolution-tower/advance",headers=headers,
                        json={"expected_generation":0}).status_code==409
     assert client.post("/v1/evolution-tower/advance",headers=headers,
