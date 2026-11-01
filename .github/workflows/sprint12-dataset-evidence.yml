@@ -1,0 +1,22 @@
+name: Sprint 12 dataset evidence
+on:
+  pull_request:
+    paths:
+      - 'research/dataset_evidence.py'
+      - 'tests/test_dataset_evidence.py'
+      - '.github/workflows/sprint12-dataset-evidence.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'research/dataset_evidence.py'
+      - 'tests/test_dataset_evidence.py'
+      - '.github/workflows/sprint12-dataset-evidence.yml'
+jobs:
+  evidence-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m unittest discover -s tests -p 'test_dataset_evidence.py' -v
