@@ -126,7 +126,7 @@ export function StudentTrainingCockpit({ students }: { students: Student[] }) {
     const timer=window.setTimeout(()=>{
       void api<NeuralReport>('/v1/students/'+encodeURIComponent(studentId)+'/neural/'+encodeURIComponent(neural.run_id)+'/epoch',
           'POST',{expected_epoch:neural.epoch})
-        .then(result=>{if(valid){setNeural(result);if(result.state==='complete')setNeuralActive(false)}})
+        .then(result=>{if(valid){setNeural(result);if(result.state==='complete'){setNeuralActive(false);setStage(previous=>previous==='running'?'complete':previous)}}})
         .catch(err=>{if(valid){setNeuralActive(false);setNeuralError(err instanceof Error?err.message:'Neural epoch failed')}})
     },420)
     return ()=>{valid=false;window.clearTimeout(timer)}
@@ -150,7 +150,17 @@ export function StudentTrainingCockpit({ students }: { students: Student[] }) {
       const previous = await api<{run:NeuralReport|null}>('/v1/students/'+encodeURIComponent(studentId)+'/neural/latest')
       if(previous.run && previous.run.epoch < previous.run.epochs_planned &&
          previous.run.model_schema === 'research_m15_outcome_mlp8x16x2.v2'){
-        setNeural(previous.run);setStage('running');setNeuralActive(true);return
+        setNeural(previous.run);setStage('running');setNeuralActive(true)
+        // Resume from durable weights without depending on a fresh feed.
+        // If history is accessible, also restore the replay and neural
+        // predictions; never make saved training depend on an upload.
+        try {
+          const history = await api<History>('/v1/students/'+encodeURIComponent(studentId)+'/train-data')
+          if(history.student_id===studentId && history.market===previous.run.market &&
+             history.bars?.length>=96 && history.paper_trading_enabled===false &&
+             history.live_trading_enabled===false) setData(history)
+        } catch { /* Saved checkpoint continues training independently of the feed. */ }
+        return
       }
       const hist = await api<History>('/v1/students/'+encodeURIComponent(studentId)+'/train-data')
       if(!hist.bars?.length || hist.bars.length<96 || hist.student_id!==studentId || hist.training_kind!=='historical_policy_replay') throw new Error('Insufficient historical research observations')
