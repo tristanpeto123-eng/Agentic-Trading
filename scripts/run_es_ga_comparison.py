@@ -31,7 +31,11 @@ def main():
     reports = []
     for i in range(args.seeds):
         seed = 20261101 + i
-        original = tuple(initial_state(seed=seed)["population"][0]["genes"])
+        # Sample different pre-existing starter behaviours across seeds:
+        # directional BUY, directional SELL, and unbiased random. Both
+        # optimisers still start from identical weights WITHIN a trial.
+        starter_index = i % 3
+        original = tuple(initial_state(seed=seed)["population"][starter_index]["genes"])
 
         def train_fitness(weights):
             return evaluate(list(weights), train)["fitness"]
@@ -44,7 +48,15 @@ def main():
             config=ESConfig(seed=seed, generations=args.generations,
                             mirrored_pairs=args.pairs),
         )
-        reports.append({"seed": seed, "report": report})
+        reports.append({
+            "seed": seed, "initial_population_index": starter_index,
+            "starter_type": ("BUY_EXPLORER", "SELL_EXPLORER", "UNBIASED_RANDOM")[starter_index],
+            "training_improved": {
+                "es": report["es"]["train_fitness"] > report["training_baseline_fitness"],
+                "genetic_mutation_control": report["genetic_mutation_control"]["train_fitness"] > report["training_baseline_fitness"],
+            },
+            "report": report,
+        })
     result = {
         "schema": "atl_es_ga_toy_comparison.v1",
         "market_data": "SYNTHETIC_RANDOM_WALK_ONLY",
