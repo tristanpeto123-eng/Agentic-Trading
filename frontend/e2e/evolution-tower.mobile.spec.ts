@@ -16,6 +16,8 @@ test('iPhone research tower creates population, advances generations and display
   const generate = tower.getByRole('button',{name:'Generate 16 agents'})
   if (await generate.isVisible()) await generate.click()
   await expect(tower.getByText('16 robots')).toBeVisible({timeout:15000})
+  // First view distinguishes selection B from diagnostic C even if entries=0.
+  await expect(tower.getByText(/ENTRIES · TOY B \(SELECTION\)/).first()).toBeVisible()
   await expect(tower.getByRole('img',{name:/Interactive three-dimensional research trading skyscraper/})).toBeVisible()
   const ids = tower.locator('.evo-agent-row .evo-agent-copy strong')
   const before = await ids.allTextContents()
@@ -23,6 +25,8 @@ test('iPhone research tower creates population, advances generations and display
   await tower.getByRole('button',{name:'Run next generation'}).click()
   await expect(tower.locator('.evo-event')).toContainText(/Generation [0-9]+:/,{timeout:15000})
   await expect(tower.locator('.evo-event')).toContainText('No compulsory bottom-half purge.')
+  await expect(tower.getByText(/Training B: [0-9]+ hypothetical entries/)).toBeVisible()
+  await expect(tower.getByText(/Diagnostic C: [0-9]+ hypothetical entries/)).toBeVisible()
   await expect(ids).toHaveCount(16)
   const after = await ids.allTextContents()
   // Rank order can change without any ID being deleted.
