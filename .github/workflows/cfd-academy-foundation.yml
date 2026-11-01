@@ -1,0 +1,27 @@
+name: CFD academy foundation (isolated)
+on:
+  push:
+    paths:
+      - 'research/cfd_arena/**'
+      - '.github/workflows/cfd-academy-foundation.yml'
+  pull_request:
+    paths:
+      - 'research/cfd_arena/**'
+      - '.github/workflows/cfd-academy-foundation.yml'
+  workflow_dispatch:
+jobs:
+  research-guards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: research/cfd_arena/requirements-dev.txt
+      - name: Install isolated research dependencies
+        run: python -m pip install -r research/cfd_arena/requirements-dev.txt
+      - name: Validate chronological partitions, execution costs and no leakage
+        run: python -m pytest research/cfd_arena/test_foundation.py research/cfd_arena/test_labeller_regressions.py -q
+      - name: Check corrected labeller syntax
+        run: python -m py_compile research/cfd_arena/autolabel.py research/cfd_arena/foundation.py
