@@ -419,7 +419,24 @@ def score_neural_candidate(context: dict, candles: list, *,
     """Model-generated but uncalibrated candidate diagnostics, never order approval."""
     if context["market"] != market or context["tactic"] != tactic:
         return {"status": "MODEL_SCOPE_MISMATCH", "recommendation": "ABSTAIN"}
-    vector, available_at = _closed_signal_features(candles, market, tactic, context["origin"])
+    try:
+        vector, available_at = _closed_signal_features(candles, market, tactic, context["origin"])
+    except ResearchNeuralError as exc:
+        # Normal "no strategy signal" / closed-market gaps are abstentions,
+        # not infrastructure failures. Never fabricate a neural prediction.
+        normal = {
+            "No strategy signal for neural inference": "NO_STRATEGY_SIGNAL",
+            "M15 gaps prevent neural inference": "GAPPED_SIGNAL_WINDOW",
+        }
+        status = normal.get(str(exc))
+        if status is None:
+            raise
+        return {
+            "status": status, "recommendation": "ABSTAIN",
+            "reason": str(exc), "checkpoint_sha256": context["weights_sha256"],
+            "epoch": context["epoch"], "prediction_uncalibrated": True,
+            "guardian_authorised": False,
+        }
     _, _, prediction = _forward(context["weights"], vector.reshape((1, FEATURE_COUNT)))
     raw = prediction[0]
     if not np.isfinite(raw).all():
