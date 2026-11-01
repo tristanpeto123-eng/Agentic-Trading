@@ -1,0 +1,51 @@
+name: ATL policy behaviour diagnostics (synthetic research)
+on:
+  pull_request:
+    paths:
+      - 'backend/src/agentic_trading/evolution_tower.py'
+      - 'backend/src/agentic_trading/behavior_probe.py'
+      - 'backend/tests/test_behavior_probe.py'
+      - 'scripts/diagnose_student_behavior.py'
+      - '.github/workflows/atl-behavior-diagnostics.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  behavioural-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research backend
+        run: python -m pip install -e './backend[dev]'
+      - name: Run observational replay tests
+        run: python -m pytest backend/tests/test_behavior_probe.py backend/tests/test_es_research.py backend/tests/test_es_genetic_comparison.py -q
+      - name: Diagnose real policy actions (toy prices only)
+        run: python scripts/diagnose_student_behavior.py --seeds 3 --pairs 8 > /tmp/atl-policy-behavior.json
+      - name: Assert report is research-only and counts are coherent
+        run: |
+          python - <<'PY'
+          import json
+          with open('/tmp/atl-policy-behavior.json') as f: r = json.load(f)
+          assert r['market_data'] == 'SYNTHETIC_RANDOM_WALK_ONLY'
+          assert not r['live_trading_enabled'] and not r['paper_trading_enabled']
+          assert not r['automatic_model_activation'] and not r['independent_validation']
+          assert len(r['experiments']) == 3
+          for x in r['experiments']:
+              m = x['diagnostic']
+              assert m['variants_evaluated'] == 16
+              assert m['changed_decision_variants'] + m['unchanged_decision_variants'] == 16
+              assert m['baseline_behavior']['decision_bars'] == sum(m['baseline_behavior']['action_counts'].values())
+              assert m['baseline_behavior']['broker_orders'] == 0
+              assert not m['fitness_used_to_select_models']
+          print('Observed actual decision diversity; no trade or qualification permissions.')
+          PY
+      - name: Upload hashed observational report
+        uses: actions/upload-artifact@v4
+        with:
+          name: atl-policy-behavior-synthetic-report
+          path: /tmp/atl-policy-behavior.json
+          retention-days: 14
