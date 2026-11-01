@@ -1,0 +1,25 @@
+name: Sprint 12 BID ASK qualification
+on:
+  pull_request:
+    paths:
+      - 'research/data_qualification.py'
+      - 'research/pair_qualification.py'
+      - 'tests/test_bid_ask_qualification.py'
+      - '.github/workflows/sprint12-data-qualification.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'research/data_qualification.py'
+      - 'research/pair_qualification.py'
+      - 'tests/test_bid_ask_qualification.py'
+      - '.github/workflows/sprint12-data-qualification.yml'
+jobs:
+  qualification-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Execute BID ASK regression tests
+        run: python -m unittest discover -s tests -p 'test_bid_ask_qualification.py' -v
