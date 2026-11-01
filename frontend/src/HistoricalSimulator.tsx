@@ -3,7 +3,9 @@ import { ArrowRight, ChevronRight, FileUp, Pause, Play, RotateCcw, ShieldAlert, 
 import { api } from './api'
 import type { HistoricalDataset, Student } from './api'
 import { parseLocalHistoricalCsv } from './BrowserCsvReplay'
+import { CandleChart } from './HistoricalResearch'
 import type { Candle } from './HistoricalResearch'
+import { AgentTracePanel } from './AgentTracePanel'
 import './HistoricalSimulator.css'
 
 type Rule = 'trend' | 'range' | 'breakout'
@@ -120,6 +122,7 @@ export function HistoricalSimulator({ students }: { students: Student[] }) {
   const [selectedSaved, setSelectedSaved] = useState('')
   const [studentId, setStudentId] = useState('')
   const [rule, setRule] = useState<Rule>('breakout')
+  const [decisionEngine, setDecisionEngine] = useState<'baseline' | 'agents'>('baseline')
   const [cursor, setCursor] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(1)
@@ -197,7 +200,7 @@ export function HistoricalSimulator({ students }: { students: Student[] }) {
     <div className="panel-heading"><div><p className="eyebrow">RESEARCH COCKPIT · XAUUSD M15</p>
       <h3>Historical Simulation</h3></div><span className="pill pill-blue">LOCAL DECISIONS · NO ORDERS</span></div>
     <div className="sim-body">
-      <p className="sim-lead">Load historical candles, select a student profile and research rule, then watch every BUY, SELL or WAIT decision as it happens. This is a transparent <strong>rule baseline</strong>, not a trained neural student.</p>
+      <p className="sim-lead">Load historical candles and watch decisions develop. Choose <strong>Student agent trace</strong> to see the actual Scout A → Strategist → Scout B → Guardian reference pipeline, or switch to fixed rule baselines. Neither is trained neural execution.</p>
       <div className="sim-steps">
         <div className="sim-step"><span className="sim-step-number">1</span><div className="sim-step-main">
           <h4>Load historical data</h4>
@@ -213,26 +216,32 @@ export function HistoricalSimulator({ students }: { students: Student[] }) {
             </select>
             <button className="btn btn-secondary" disabled={!selectedSaved || busy} onClick={() => void loadSaved()}>Load saved <ArrowRight size={14}/></button>
           </div>}
-          <small className="muted">CSV columns: timestamp_open (or time), open, high, low, close [,volume]. UTC, 15-minute candles. Device files stay in this browser session.</small>
+          <small className="muted">CSV columns: timestamp_open (or time), open, high, low, close [,volume]. UTC M15. Fixed-rule replay stays on your device; Agent trace sends short candle windows to your authenticated server for read-only analysis (not saved).</small>
         </div></div>
         <div className="sim-step"><span className="sim-step-number">2</span><div className="sim-step-main">
           <h4>Choose who and how to evaluate</h4>
           <div className="sim-options">
             <label>Student context
-              <select aria-label="Simulation student" value={studentId} onChange={e => { setPlaying(false); setStudentId(e.target.value) }}>
+              <select aria-label="Simulation student" value={studentId} onChange={e => { setPlaying(false); setStudentId(e.target.value); setDecisionEngine(e.target.value ? 'agents' : 'baseline') }}>
                 <option value="">Research baseline · no student</option>
-                {students.map(student => <option key={student.id} value={student.id}>{student.name} · profile only</option>)}
+                {students.map(student => <option key={student.id} value={student.id}>{student.name} · research identity</option>)}
               </select>
             </label>
-            <label>Decision rule
+            <label>Decision engine
+              <select aria-label="Simulation engine" value={decisionEngine} onChange={e => { setPlaying(false); setDecisionEngine(e.target.value as 'baseline' | 'agents') }}>
+                <option value="baseline">Fixed rules · illustrative P&amp;L</option>
+                <option value="agents" disabled={!studentId}>Student agent trace · real S4 pipeline</option>
+              </select>
+            </label>
+            {decisionEngine === 'baseline' && <label>Decision rule
               <select aria-label="Simulation rule" value={selectedRule ?? ''} disabled={!permitted.length}
                 onChange={e => { setPlaying(false); setRule(e.target.value as Rule) }}>
                 {!permitted.length && <option value="">No XAUUSD rule in plan</option>}
                 {permitted.map(r => <option key={r} value={r}>{r === 'trend' ? 'Trend following' : r === 'range' ? 'Range reversal' : '4-candle breakout'}</option>)}
               </select>
-            </label>
+            </label>}
           </div>
-          {chosen && <small className="muted">{chosen.name} is used only to scope permitted research rules. No stored neural checkpoint is running and the student is not learning from this replay.</small>}
+          {chosen && <small className="muted">{chosen.name} supplies research scope and identity. Student agent trace runs the existing server-side deterministic pipeline, with Scout B untrained and no executable decision. Nothing is learned or persisted.</small>}
           {!permitted.length && <p className="message-error" role="alert">This student's plan has no XAUUSD trend, range or breakout target. Choose another student or the standalone baseline.</p>}
         </div></div>
       </div>
@@ -241,10 +250,10 @@ export function HistoricalSimulator({ students }: { students: Student[] }) {
       {busy && <p className="muted" role="status">Verifying historical candles and preparing timeline…</p>}
       {!bars.length && !busy && <div className="sim-empty"><FileUp size={23}/><strong>Ready for your historical dataset</strong>
         <span>Load an XAUUSD M15 CSV above to start replaying actual archived candles, rather than the invented engine demo.</span></div>}
-      {!!bars.length && selectedRule && <>
+      {!!bars.length && (decisionEngine === 'agents' ? Boolean(chosen) : Boolean(selectedRule)) && <>
         <div className="sim-loaded"><strong>{source}</strong><span>{bars.length.toLocaleString('en-GB')} completed candles · {gaps} gaps · unverified archive</span></div>
         {truncated && <p className="sim-note">Displaying the latest {bars.length.toLocaleString('en-GB')} saved candles. For the full historical archive, select its original CSV from Files.</p>}
-        <div className="sim-dashboard">
+        {decisionEngine === 'baseline' ? <><div className="sim-dashboard">
           <div><span>Candle</span><strong>{(cursor + 1).toLocaleString('en-GB')} / {bars.length.toLocaleString('en-GB')}</strong></div>
           <div><span>Decisions to trade</span><strong>{decisions.slice(0, cursor + 1).filter(d => d.action !== 'WAIT').length}</strong></div>
           <div><span>Closed hypothetical outcomes</span><strong>{visibleTrades.length}</strong></div>
@@ -252,6 +261,10 @@ export function HistoricalSimulator({ students }: { students: Student[] }) {
           <div><span>Win rate</span><strong>{visibleTrades.length ? (wins * 100 / visibleTrades.length).toFixed(1) + '%' : '—'}</strong></div>
         </div>
         <DecisionChart bars={bars} decisions={decisions} cursor={cursor}/>
+        </> : <>
+          <div className="sim-loaded"><strong>Agent decision mode</strong><span>Research-only · no model-generated orders, no assumed P&amp;L</span></div>
+          <CandleChart candles={bars.slice(Math.max(0, cursor - 61), cursor + 1)}/>
+        </>}
         <div className="sim-control-panel">
           <label htmlFor="simulation-timeline">3 · Replay timeline — {stamp(bars[cursor].available_at)}</label>
           <input id="simulation-timeline" type="range" min={0} max={bars.length - 1} value={cursor}
@@ -263,7 +276,7 @@ export function HistoricalSimulator({ students }: { students: Student[] }) {
             }}>{playing ? <Pause size={15}/> : <Play size={15}/>} {playing ? 'Pause replay' : 'Start replay'}</button>
             <button type="button" className="btn btn-secondary" disabled={cursor >= bars.length - 1}
               onClick={() => { setPlaying(false); setCursor(i => Math.min(i + 1, bars.length - 1)) }}><StepForward size={15}/> Step</button>
-            <button type="button" className="btn btn-secondary" disabled={!upcoming}
+            <button type="button" className="btn btn-secondary" disabled={decisionEngine === 'agents' || !upcoming}
               onClick={() => { setPlaying(false); if (upcoming) setCursor(upcoming.index) }}><SkipForward size={15}/> Next decision</button>
             <button type="button" className="btn btn-secondary" onClick={() => { setPlaying(false); setCursor(0) }}><RotateCcw size={15}/> Reset</button>
             <label>Speed
@@ -273,7 +286,8 @@ export function HistoricalSimulator({ students }: { students: Student[] }) {
             </label>
           </div>
         </div>
-        {current && <div className="sim-decision" role="status" aria-live="off">
+        {decisionEngine === 'agents' && chosen && <AgentTracePanel bars={bars} cursor={cursor} studentId={chosen.id}/>}
+        {decisionEngine === 'baseline' && current && <div className="sim-decision" role="status" aria-live="off">
           <div className="sim-decision-head"><div><p className="eyebrow">DECISION · CANDLE CLOSE</p><h4>Why did the rule choose this?</h4></div>
             <span className={'sim-action sim-' + current.action.toLowerCase()}>{current.action}</span></div>
           <p>{current.reason}</p>
@@ -284,15 +298,15 @@ export function HistoricalSimulator({ students }: { students: Student[] }) {
           </div>
           {current.action !== 'WAIT' && <p className="sim-note">Signal observed at this completed candle close. Illustrative entry is the NEXT candle's recorded open, and exit its close. It cannot know that next-bar result yet.</p>}
         </div>}
-        <div className="sim-journal"><h4>Decision journal <ChevronRight size={15}/></h4>
+        {decisionEngine === 'baseline' && <div className="sim-journal"><h4>Decision journal <ChevronRight size={15}/></h4>
           {lastDecisions.length ? lastDecisions.map(d => <div className="sim-journal-row" key={d.index}>
             <span className={'sim-action sim-' + d.action.toLowerCase()}>{d.action}</span>
             <div><strong>{stamp(d.time)}</strong><small>{d.reason}</small></div>
             <span>{d.index < cursor && d.pnl !== null ? money(d.pnl) : 'Pending'}</span>
           </div>) : <p className="muted">No BUY or SELL signal yet. Step forward or select Next decision.</p>}
-        </div>
+        </div>}
       </>}
-      <div className="historical-warning"><ShieldAlert size={15}/> This is a rule-based replay, not a trained neural model or approved trading bot. P&amp;L uses unverified M15 open/close prices and assumed fixed costs, with no real quotes, broker fills, stops, latency, margin or funding. It sends NO orders and writes NO student training memories.</div>
+      <div className="historical-warning"><ShieldAlert size={15}/> In baseline mode, trade outcomes use unverified M15 prices and illustrative costs, not real fills. In Student agent trace mode, Scout/Strategist use the authentic deterministic S4 code but Scout B has no independent model, Guardian does not approve intents and there is no neural signal. Neither mode sends orders, changes students, trains models or writes NO student training memories.</div>
     </div>
   </section>
 }
