@@ -126,6 +126,44 @@ def test_every_profitable_bot_survives_even_with_low_rank(monkeypatch):
     assert all(a["assessments"]==4 for a in state["population"])
 
 
+def test_recruit_exploration_is_real_neural_policy_not_fabricated_entries():
+    state=initial_state(seed=112233)
+    from agentic_trading.evolution_tower import _brain
+    features=[0.0]*6
+    # Some initial chromosomes are seeded to propose trades, while HOLD
+    # remains available; no execution or guaranteed profitability is asserted.
+    proposals=[_brain(a["genes"],features) for a in state["population"]]
+    assert 1 in proposals and 2 in proposals
+    assert len(state["population"])==16
+    assert all(a["metrics"] is None for a in state["population"])
+    first,events=advance_state(state)
+    audit=events[0]["entry_diagnostics"]
+    assert audit["evaluated_agents"]==16
+    assert audit["order_execution"] is False
+    assert audit["training_entries_total"]>=0
+    assert audit["training_inactive_agents"]<=16
+    assert len(first["population"])==16
+
+
+def test_idle_agents_replaced_by_explorers_after_prolonged_probation(monkeypatch):
+    from agentic_trading.evolution_tower import _brain
+    def always_idle(_genes,_gen,_real=None):
+        metrics={"trades":0,"return_pct":0.,"fitness":0.,"risk_breached":False,
+                 "closed_trades":0,"drawdown_pct":0.,"death_reason":None}
+        return {"training":metrics,"selection":metrics,"source_kind":"SYNTHETIC_RANDOM_WALK_ONLY"}
+    monkeypatch.setattr(tower,"_grade",always_idle)
+    state=initial_state(seed=77)
+    for _ in range(3):
+        state,event=advance_state(state)
+    explorers=[a for a in state["population"]
+               if a.get("origin")=="DIRECTIONAL_RESEARCH_EXPLORER"]
+    assert 1<=len(explorers)<=tower.MAX_PROBATION_RETIREMENTS
+    assert all(a["parent_id"] is None for a in explorers)
+    assert all(_brain(a["genes"],[0.0]*6) in (1,2) for a in explorers)
+    assert event[0]["entry_diagnostics"]["training_inactive_agents"]==16
+    assert not public_state(state,event)["paper_trading_enabled"]
+
+
 def test_fitness_includes_friction_and_bounded_risk_with_no_external_data():
     tape=make_tape(55,192)
     assert make_tape(55,192)==tape
@@ -136,6 +174,9 @@ def test_fitness_includes_friction_and_bounded_risk_with_no_external_data():
     report=evaluate(genes,tape)
     assert report["trades"]>=1
     assert report["cost_usd"]>0
+    assert report["entry_samples"]
+    assert report["entry_samples"][0]["side"]=="BUY"
+    assert report["entry_samples"][0]["price_basis"]=="ASSUMED_SYNTHETIC_EXECUTION"
     assert report["drawdown_pct"]>=0
     assert report["fitness"]<100
     assert report["return_pct"]<20

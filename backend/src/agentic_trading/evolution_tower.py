@@ -17,6 +17,8 @@ POPULATION = 16
 GENERATION_LIMIT = 100
 PROBATION_ASSESSMENTS = 3  # Three replays; NOT three independent market samples.
 MAX_PROBATION_RETIREMENTS = 2  # Normal turnover is gradual, never compulsory.
+# Purposeful *research-only* exploration, not a requirement to execute an order.
+# New directional candidate weights are evaluated against real costs and risk.
 GENES = 6 * 8 + 8 + 8 * 4 + 4
 START_EQUITY = 1000.0
 MAX_DRAWDOWN = 0.20
@@ -81,6 +83,7 @@ def evaluate(genes: list[float], tape: list[float]) -> dict:
     peak = equity
     max_dd = 0.0
     trades = 0
+    entry_samples = []
     wins = 0
     closed = 0
     cost_total = 0.0
@@ -129,6 +132,11 @@ def evaluate(genes: list[float], tape: list[float]) -> dict:
                 cash -= cost
                 cost_total += cost + qty*abs(entry_price-next_price)
                 trades += 1
+                if len(entry_samples) < 5:
+                    entry_samples.append({"step":i+1,
+                                          "side":"BUY" if desired_sign>0 else "SELL",
+                                          "price":round(entry_price, 5),
+                                          "price_basis":"ASSUMED_SYNTHETIC_EXECUTION"})
         elif pos:
             held_bars += 1
         if pos and (i+1) % 96 == 0:
@@ -172,13 +180,26 @@ def evaluate(genes: list[float], tape: list[float]) -> dict:
         "closed_trades": closed, "wins": wins,
         "win_rate_pct": round(100*wins/closed, 2) if closed else 0.,
         "cost_usd": round(cost_total, 4), "sortino_proxy": round(sortino, 4),
-        "fitness": round(fitness, 4), "risk_breached": ended,
+        "fitness": round(fitness, 4), "entry_samples":entry_samples,
+        "risk_breached": ended,
         "death_reason": reason,
     }
 
 
-def _new_genes(rng: random.Random) -> list[float]:
-    return [round(rng.gauss(0,0.28),8) for _ in range(GENES)]
+def _new_genes(rng: random.Random, *, explore_side: str | None = None) -> list[float]:
+    """Seed optional directional RESEARCH candidates, never orders or fills.
+
+    Only new/respawned chromosomes are seeded; existing saved genomes are
+    never silently altered. Exploration changes neural output bias, not the
+    execution policy, broker state or fixed risk controls.
+    """
+    genes = [round(rng.gauss(0,0.28),8) for _ in range(GENES)]
+    if explore_side in ("BUY","SELL"):
+        genes[88] = round(genes[88]-0.65,8)  # lower inactive HOLD preference
+        genes[91] = round(genes[91]-0.65,8)  # lower flat CLOSE preference
+        genes[89 if explore_side=="BUY" else 90] = round(
+            genes[89 if explore_side=="BUY" else 90]+1.5,8)
+    return genes
 
 
 def _floor(result: dict, rank: int) -> int:
@@ -220,7 +241,10 @@ def initial_state(seed: int=20261101, count: int=POPULATION) -> dict:
     rng=random.Random(seed)
     agents=[]
     for i in range(count):
-        genes=_new_genes(rng)
+        # Four of every eight recruits explore each direction; the rest
+        # remain unbiased. No policy overrides neural decisions at replay.
+        side = "BUY" if i%4==0 else "SELL" if i%4==1 else None
+        genes=_new_genes(rng, explore_side=side)
         agents.append({"id":f"ATL-G0-{i+1:03d}","generation":0,"parent_id":None,
                        "genes":genes,"genome_sha256":_digest(genes),"status":"nursery",
                        "floor":1,"metrics":None,
@@ -262,7 +286,10 @@ def advance_state(state: dict) -> tuple[dict,list[dict]]:
         item["probation_streak"] = streak
         if not result["risk_breached"] and streak >= PROBATION_ASSESSMENTS:
             probation_candidates.append(item)
+    # Prioritise chronically inactive bots for vacancy-based exploration.
+    # Even an entry-capable loss-maker never gets a free qualification.
     probation_candidates.sort(key=lambda x: (
+        x["metrics"][selection_key]["trades"] != 0,
         -x["probation_streak"], x["metrics"][selection_key]["fitness"], x["id"]))
     retiring = {x["id"] for x in probation_candidates[:MAX_PROBATION_RETIREMENTS]}
     kept, removed = [], []
@@ -295,9 +322,11 @@ def advance_state(state: dict) -> tuple[dict,list[dict]]:
     for slot in range(len(ranked)-len(kept)):
         parent=parents[slot%len(parents)] if parents else None
         mutated=([round(max(-3,min(3,g+rng.gauss(0,0.06))),8)
-                  for g in parent["genes"]] if parent else _new_genes(rng))
+                  for g in parent["genes"]] if parent else
+                 _new_genes(rng,explore_side="BUY" if (gen+slot)%2 else "SELL"))
         child={"id":f"ATL-G{gen}-{slot+1:03d}","generation":gen,
                "parent_id":parent["id"] if parent else None,
+               "origin":"PARENT_MUTATION" if parent else "DIRECTIONAL_RESEARCH_EXPLORER",
                "genes":mutated,"genome_sha256":_digest(mutated),
                "floor":1, "status":"nursery", "metrics":None,
                "assessments":0, "probation_streak":0}
@@ -317,6 +346,16 @@ def advance_state(state: dict) -> tuple[dict,list[dict]]:
              "probation_after":PROBATION_ASSESSMENTS,
              "max_nonrisk_retirements":MAX_PROBATION_RETIREMENTS,
              "probation_count":sum(a["status"]=="probation" for a in kept),
+             "entry_diagnostics":{
+                 "evaluated_agents":len(ranked),
+                 "training_entries_total":sum(a["metrics"]["training"]["trades"] for a in ranked),
+                 "diagnostic_entries_total":sum(a["metrics"]["selection"]["trades"] for a in ranked),
+                 "training_inactive_agents":sum(a["metrics"]["training"]["trades"]==0 for a in ranked),
+                 "diagnostic_inactive_agents":sum(a["metrics"]["selection"]["trades"]==0 for a in ranked),
+                 "source_kind":("REAL_XAUUSD_BID_ASK_RESEARCH_UNQUALIFIED" if state.get("real_data")
+                                else "SYNTHETIC_RANDOM_WALK_ONLY"),
+                 "order_execution":False,
+             },
              "selection_is_not_validation":True,
              "ranking_source":selection_key,
              "source_sha256":state.get("real_data",{}).get("source_sha256")}]
