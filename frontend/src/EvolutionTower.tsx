@@ -41,7 +41,8 @@ export function EvolutionTower(){
       const result=await api<TowerState>(endpoint,'POST',
         kind==='advance'?{expected_generation:state?.generation??0}:{})
       setState(result)
-      if(kind==='advance')setSelectedId(result.agents?.[0]?.id??null)
+      // Keep the exterior camera stable as agents ascend. Only explicit
+      // agent selection changes camera focus.
     }catch(e){setAuto(false);setError(e instanceof Error?e.message:'Evolution step failed')}
     finally{setBusy(false)}
   }
@@ -77,7 +78,7 @@ export function EvolutionTower(){
         <div className="evo-stage">
           {state?.initialized ? <>
             <EvolutionTowerScene agents={agents} events={events} selectedId={selectedId} onSelect={setSelectedId}/>
-            <div className="evo-view-top"><span>CAM 01 · ORBIT VIEW</span><span>FLOOR {selected?.floor??1}</span></div>
+            <div className="evo-view-top"><span>CAM 01 · ORBIT VIEW</span><button type="button" className="evo-full-view" onClick={()=>setSelectedId(null)}>Full tower</button></div>
             <div className="evo-view-legend">
               <span><i className="evo-dot nursery"/> Nursery</span>
               <span><i className="evo-dot survivor"/> Survivors</span>
