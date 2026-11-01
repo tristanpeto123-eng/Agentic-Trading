@@ -76,7 +76,7 @@ export function EvolutionTower(){
       <div className="evo-workspace">
         <div className="evo-stage">
           {state?.initialized ? <>
-            <EvolutionTowerScene agents={agents} events={events} selectedId={selected?.id??null} onSelect={setSelectedId}/>
+            <EvolutionTowerScene agents={agents} events={events} selectedId={selectedId} onSelect={setSelectedId}/>
             <div className="evo-view-top"><span>CAM 01 · ORBIT VIEW</span><span>FLOOR {selected?.floor??1}</span></div>
             <div className="evo-view-legend">
               <span><i className="evo-dot nursery"/> Nursery</span>
