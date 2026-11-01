@@ -36,6 +36,9 @@ from agentic_trading.paper_readiness import evaluate_readiness, paper_requests, 
 from agentic_trading.providers.alpaca_paper_readonly import preview_btc_paper, PaperPreviewError
 from agentic_trading.providers.alpaca_account_readonly import read_paper_account, PaperAccountReadError
 from agentic_trading.providers.alpaca_crypto_history import fetch_private_btc_history, CryptoDataError
+from agentic_trading.providers.xauusd_bidask import (
+    QuoteSourceError, fetch_oanda_practice, fetch_dukascopy_research, compare_sources,
+)
 from agentic_trading.settings import Settings
 from agentic_trading.historical_store import DATABASE_ARTIFACT_PATH, store_historical_artifacts, verified_candles
 from agentic_trading.historical_demo import build_historical_demo
@@ -332,6 +335,33 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         student = get_student_or_404(student_id, session)
         plan = max(student.plans, key=lambda item: item.version)
         targets = list(plan.markets) if plan.mode == "directed" else ["XAUUSD", "BTCUSD"]
+        # Remote XAU research is opt-in; neither feed authorises order routing.
+        provider_failures = []
+        if "XAUUSD" in targets:
+            oanda_enabled = os.environ.get("ATL_OANDA_PRACTICE_RESEARCH", "0") == "1"
+            dukascopy_enabled = os.environ.get("ATL_DUKASCOPY_RESEARCH_DOWNLOAD", "0") == "1"
+            snapshot = None
+            if oanda_enabled:
+                try:
+                    snapshot = fetch_oanda_practice(token=os.environ.get("OANDA_V20_PRACTICE_TOKEN", ""))
+                except QuoteSourceError as exc:
+                    provider_failures.append(str(exc))
+            if dukascopy_enabled and (snapshot is None or
+                    os.environ.get("ATL_XAU_CROSSCHECK", "0") == "1"):
+                try:
+                    dukascopy = fetch_dukascopy_research(
+                        cache_dir=data_root / "dukascopy-cache", download=True)
+                    if snapshot is None:
+                        snapshot = dukascopy
+                    else:
+                        snapshot["crosscheck"] = compare_sources(snapshot, dukascopy)
+                except QuoteSourceError as exc:
+                    provider_failures.append(str(exc))
+                    if snapshot is not None:
+                        snapshot["crosscheck"] = {"comparable": False, "reason": "secondary feed unavailable"}
+            if snapshot is not None:
+                response.headers["Cache-Control"] = "no-store"
+                return {"student_id": student_id, **snapshot}
         if "XAUUSD" in targets:
             rows = session.scalars(select(HistoricalDataset).order_by(
                 HistoricalDataset.ingested_at.desc())).all()
@@ -395,7 +425,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             }
         raise HTTPException(
             status_code=409,
-            detail="No automatic historical feed available for this student's target market. XAUUSD requires an existing archived dataset; EURUSD, GBPUSD, indices require another research data source.",
+            detail=("XAUUSD source unavailable: " + "; ".join(provider_failures)
+                    if provider_failures and targets == ["XAUUSD"] else
+                    "No automatic historical feed available for this student's target market. "
+                    "Enable an approved XAU/USD OANDA practice or Dukascopy source, or add an owner archive. "
+                    "Other markets require a separate read-only provider."),
         )
 
     @api.get("/v1/datasets")
