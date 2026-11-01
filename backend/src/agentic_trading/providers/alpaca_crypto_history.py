@@ -70,7 +70,8 @@ def _validated_record(record: object, *, kind: str,
     if not start <= stamp < end or stamp >= now:
         raise CryptoDataError("Observation outside requested, completed UTC history")
     if kind == "bars":
-        interval = timedelta(hours=1) if timeframe == "1Hour" else timedelta(days=1)
+        interval = (timedelta(minutes=15) if timeframe == "15Min" else
+                    timedelta(hours=1) if timeframe == "1Hour" else timedelta(days=1))
         if stamp + interval > now:
             raise CryptoDataError("Unfinished bar rejected")
         values = {k: _number(record.get(k), k, positive=(k != "v"))
@@ -97,7 +98,7 @@ def _check_window(start: datetime, end: datetime, now: datetime,
         raise CryptoDataError("Invalid or unfinished requested date range")
     if kind not in ("bars", "quotes"):
         raise CryptoDataError("Only bars and read-only quotes are permitted")
-    if (kind == "bars" and timeframe not in ("1Hour", "1Day")) or (
+    if (kind == "bars" and timeframe not in ("15Min", "1Hour", "1Day")) or (
         kind == "quotes" and timeframe != "quote"):
         raise CryptoDataError("Unsupported aggregation or quote mode")
     ceiling = timedelta(days=31) if kind == "bars" else timedelta(minutes=30)
