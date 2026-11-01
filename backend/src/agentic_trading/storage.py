@@ -290,3 +290,29 @@ class ResearchNeuralEpoch(Base):
     development_loss: Mapped[float] = mapped_column(Float, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     __table_args__ = (Index("ix_neural_epoch_unique", "run_id", "epoch", unique=True),)
+
+
+
+class EvolutionTowerSession(Base):
+    """One CEO-owned, synthetic research cohort with immutable-by-service versions."""
+    __tablename__ = "evolution_tower_sessions"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    ceo_id: Mapped[str] = mapped_column(String(36), ForeignKey("ceo_users.id"), nullable=False)
+    generation: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    state: Mapped[dict] = mapped_column(JSON, nullable=False)
+    state_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    __table_args__ = (Index("ix_evolution_tower_ceo", "ceo_id", unique=True),)
+
+
+class EvolutionTowerArchive(Base):
+    """Permanent append-only elimination/birth events; fail-closed on checksum mismatch."""
+    __tablename__ = "evolution_tower_archive"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    session_id: Mapped[str] = mapped_column(String(36), ForeignKey("evolution_tower_sessions.id"), nullable=False)
+    generation: Mapped[int] = mapped_column(Integer, nullable=False)
+    event: Mapped[dict] = mapped_column(JSON, nullable=False)
+    event_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    __table_args__ = (Index("ix_evolution_tower_event_generation", "session_id", "generation", unique=True),)
