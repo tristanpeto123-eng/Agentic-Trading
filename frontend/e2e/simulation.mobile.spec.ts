@@ -24,6 +24,7 @@ test('iPhone simulator: load local M15 data and inspect stepwise BUY decisions, 
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button', { name: 'Access console' }).click()
   await page.locator('nav.bottom-nav').getByRole('button', { name: 'Trading' }).click()
+  await page.getByText('Advanced tools · historical replay, data & paper account').click()
   await expect(page.getByRole('heading', { name: 'Historical Simulation' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Trade and P&L replay' })).toBeHidden()
   await page.getByLabel('Load M15 historical CSV').setInputFiles({
