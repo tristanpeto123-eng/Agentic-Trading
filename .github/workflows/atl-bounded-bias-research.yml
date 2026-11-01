@@ -1,0 +1,48 @@
+name: ATL bounded output bias research
+on:
+  pull_request:
+    paths:
+      - 'backend/src/agentic_trading/bounded_bias_exploration.py'
+      - 'backend/tests/test_bounded_bias_exploration.py'
+      - 'scripts/run_bounded_bias_exploration.py'
+      - '.github/workflows/atl-bounded-bias-research.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bounded-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install app test dependencies
+        run: python -m pip install -e './backend[dev]'
+      - name: Test isolation, abstention and bounded research
+        run: python -m pytest backend/tests/test_bounded_bias_exploration.py backend/tests/test_behavior_probe.py -q
+      - name: Run reproducible toy exploration
+        run: python scripts/run_bounded_bias_exploration.py > /tmp/atl-bounded-bias.json
+      - name: Assert no simulated result grants trading authority
+        run: |
+          python - <<'PY'
+          import json
+          with open('/tmp/atl-bounded-bias.json') as f: obj=json.load(f)
+          assert obj['data_kind']=='SYNTHETIC_RANDOM_WALK_ONLY'
+          assert obj['research_only'] and obj['no_claim_of_profitability']
+          assert obj['model_activation'] is False
+          assert obj['paper_trading_enabled'] is False
+          assert obj['live_trading_enabled'] is False
+          assert len(obj['runs'])==3
+          for run in obj['runs']:
+              assert run['selected_train_fitness'] >= run['baseline_train_fitness']
+              assert len(run['report_sha256'])==64
+          print('No model activation and no brokerage actions: PASS')
+          PY
+      - name: Upload synthetic-only experiment
+        uses: actions/upload-artifact@v4
+        with:
+          name: atl-bounded-bias-synthetic-report
+          path: /tmp/atl-bounded-bias.json
+          retention-days: 14
