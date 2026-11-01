@@ -106,7 +106,7 @@ def test_dukascopy_reconciles_m1_bid_ask_without_invented_candles():
     assert result["persisted"] is False
     compared = compare_sources(result, result)
     assert compared["matched"] == 96
-    assert compared["max_absolute_mid_close_usd"] == "0"
+    assert Decimal(compared["max_absolute_mid_close_usd"]) == 0
 
 
 def add_student(factory, market="XAUUSD"):
@@ -139,7 +139,7 @@ def test_one_click_uses_opted_in_oanda_and_optional_independent_crosscheck(tmp_p
     data = result.json()
     assert data["provider"] == "OANDA v20 practice BID/ASK"
     assert data["crosscheck"]["matched"] == 120
-    assert data["crosscheck"]["max_absolute_mid_close_usd"] == "0"
+    assert Decimal(data["crosscheck"]["max_absolute_mid_close_usd"]) == 0
     assert data["student_id"] == student
     assert result.headers["cache-control"] == "no-store"
     assert called == [("oanda", "not-a-real-key"), ("dukascopy", True)]
