@@ -166,7 +166,7 @@ def test_authenticated_neural_flow_no_broker_or_policy_write(tmp_path, monkeypat
     resumed = client.post(base+"/start", headers=headers, json={})
     assert resumed.status_code == 200
     assert resumed.json()["run_id"] == first["run_id"]
-    assert calls == [student_id]
+    assert resumed.json()["snapshot_sha256"] == first["snapshot_sha256"]
     with factory() as session:
         from agentic_trading.storage import TradeExperience, ResearchPolicyCandidate
         assert session.scalars(select(TradeExperience)).all() == []
