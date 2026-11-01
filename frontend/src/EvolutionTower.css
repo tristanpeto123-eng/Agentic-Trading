@@ -87,3 +87,16 @@
 .evo-mini-bot.probation{background:#493527;color:#f3b481}
 .evo-agent-row:has(.evo-mini-bot.probation) .evo-agent-copy small{color:#f3b481}
 .evo-event.safe{background:#132e30;color:#9dd6ca;border-top-color:#315b58}
+
+/* Distinguish historical training entries from diagnostic-only C metrics. */
+.evo-entry-diagnostics{padding:13px 21px;border-top:1px solid #315469;background:#122c3c;color:#c3e8f0;font-size:11px;line-height:1.6}
+.evo-entry-diagnostics>strong{display:block;font-size:12px;margin-bottom:7px}
+.evo-entry-diagnostics>div{display:flex;gap:12px;flex-wrap:wrap}
+.evo-entry-diagnostics>div>span{background:#1e3b4c;border:1px solid #315d6d;border-radius:7px;padding:7px 10px;flex:1 1 205px}
+.evo-entry-diagnostics small{display:block;margin-top:9px;color:#91b7c8;font-size:10px}
+.evo-entries{display:grid;gap:5px;min-width:0;margin:10px 0}
+.evo-entries>strong{font-size:10px;color:#9bd6da}
+.evo-entries>div{display:flex;justify-content:space-between;align-items:center;gap:7px;padding:6px 8px;border:1px solid #315469;border-radius:5px;font-size:10px;color:#b9dce4;overflow-wrap:anywhere}
+.evo-entries b{color:#efd0a0;font-size:10px}
+.evo-inspect .evo-flat-note{color:#eeae8f;line-height:1.5}
+@media(max-width:650px){.evo-entry-diagnostics{padding:12px 15px}.evo-entry-diagnostics>div{flex-direction:column;gap:6px}}
