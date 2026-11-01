@@ -148,7 +148,8 @@ export function StudentTrainingCockpit({ students }: { students: Student[] }) {
     setStage('fetching');setData(null);setCursor(0);setError('');setNeuralError('');setNeuralActive(false)
     try{
       const previous = await api<{run:NeuralReport|null}>('/v1/students/'+encodeURIComponent(studentId)+'/neural/latest')
-      if(previous.run && previous.run.epoch < previous.run.epochs_planned){
+      if(previous.run && previous.run.epoch < previous.run.epochs_planned &&
+         previous.run.model_schema === 'research_m15_outcome_mlp8x16x2.v2'){
         setNeural(previous.run);setStage('running');setNeuralActive(true);return
       }
       const hist = await api<History>('/v1/students/'+encodeURIComponent(studentId)+'/train-data')
