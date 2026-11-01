@@ -7,6 +7,7 @@ import { HistoricalResearch } from './HistoricalResearch'
 import { HistoricalDemoLab } from './HistoricalDemoLab'
 import { HistoricalSimulator } from './HistoricalSimulator'
 import { StudentTrainingCockpit } from './StudentTrainingCockpit'
+import { EvolutionTower } from './EvolutionTower'
 import { BrowserCsvReplay } from './BrowserCsvReplay'
 import { M1BidAskInspector } from './M1BidAskInspector'
 import { MarketStudy } from './MarketStudy'
@@ -454,6 +455,7 @@ function TradingPage({ students }: { students: Student[] }) {
   }
   return <div className="page-enter">
     <Header title="Trading" description="Choose a student, press Train, and watch real historical research statistics update. Broker trading remains locked."/>
+    <EvolutionTower/>
     <StudentTrainingCockpit students={students}/>
     <details className="sim-advanced"><summary>Advanced tools · historical replay, data & paper account</summary><div className="sim-advanced-content">
     <div className="trading-switch" role="tablist" aria-label="Trading environment">
