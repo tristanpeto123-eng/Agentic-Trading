@@ -20,6 +20,7 @@
 .evo-canvas canvas{display:block;width:100%!important;height:100%!important}
 .evo-view-top{position:absolute;left:18px;right:18px;top:17px;pointer-events:none;display:flex;justify-content:space-between;gap:12px;font-size:10px;font-weight:800;letter-spacing:.1em;color:#b3dbe7}
 .evo-view-top span{background:#061a2ac7;border:1px solid #29566a;border-radius:6px;padding:8px 10px}
+.evo-full-view{pointer-events:auto;cursor:pointer;background:#173f51ee;color:#ccecf4;border:1px solid #3b7f8e;border-radius:6px;padding:8px 10px;font-size:10px;font-weight:800;letter-spacing:.04em}.evo-full-view:hover{background:#245c6b}
 .evo-view-legend{position:absolute;bottom:53px;left:15px;right:15px;display:flex;gap:11px;flex-wrap:wrap;pointer-events:none}
 .evo-view-legend>span{font-size:9px;color:#c5dfea;background:#061827d9;border:1px solid #315065;border-radius:18px;padding:6px 10px;display:inline-flex;align-items:center;gap:6px}
 .evo-dot{width:7px;height:7px;background:#86c5fb;border-radius:50%;display:inline-block}
