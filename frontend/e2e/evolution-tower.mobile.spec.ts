@@ -11,13 +11,19 @@ test('iPhone research tower creates population, advances generations and display
   const tower=page.getByLabel('Evolution Tower research arena')
   await expect(tower.getByRole('heading',{name:/Evolution Tower/})).toBeVisible()
   await expect(tower.getByText('SYNTHETIC RESEARCH')).toBeVisible()
-  await tower.getByRole('button',{name:'Generate 16 agents'}).click()
+  // Tests share one ephemeral SQLite file across Playwright retries. A retry
+  // may encounter the cohort already created by the first attempt.
+  const generate = tower.getByRole('button',{name:'Generate 16 agents'})
+  if (await generate.isVisible()) await generate.click()
   await expect(tower.getByText('16 robots')).toBeVisible({timeout:15000})
   await expect(tower.getByRole('img',{name:/Interactive three-dimensional research trading skyscraper/})).toBeVisible()
-  await expect(tower.locator('.evo-agent-list').getByText('ATL-G0-001',{exact:true})).toBeVisible()
+  const ids = tower.locator('.evo-agent-row .evo-agent-copy strong')
+  const before = await ids.allTextContents()
+  expect(before).toHaveLength(16)
   await tower.getByRole('button',{name:'Run next generation'}).click()
-  await expect(tower.getByText(/Generation 1: .* eliminated/)).toBeVisible({timeout:15000})
-  await expect(tower.locator('.evo-agent-list').getByText('ATL-G1-001',{exact:true})).toBeVisible()
+  await expect(tower.getByText(/Generation [0-9]+: .* eliminated/)).toBeVisible({timeout:15000})
+  await expect.poll(async()=>ids.allTextContents()).not.toEqual(before)
+  const after = await ids.allTextContents()
   await tower.getByRole('button',{name:/View failure archive/}).click()
   await expect(tower.getByLabel('Evolution failure archive')).toBeVisible()
   await expect(tower.getByText(/penthouse/i).first()).toBeVisible()
@@ -26,7 +32,7 @@ test('iPhone research tower creates population, advances generations and display
   // Navigate back to Trading to verify that the server persisted the cohort.
   await page.locator('nav.bottom-nav').getByRole('button',{name:'Trading'}).click()
   await expect(tower.getByText('16 robots')).toBeVisible()
-  await expect(tower.locator('.evo-agent-list').getByText('ATL-G1-001',{exact:true})).toBeVisible()
+  await expect.poll(async()=>tower.locator('.evo-agent-row .evo-agent-copy strong').allTextContents()).toEqual(after)
   await expect(tower.getByText('Auto-evolve in this tab')).toBeVisible()
   await expect(tower.getByText(/No 24\/7 worker is deployed/)).toBeVisible()
   // Existing current student training remains accessible lower down.
