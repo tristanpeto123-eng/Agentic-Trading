@@ -109,6 +109,12 @@ def inspect_trace_batch(payload: TraceBatchInput, *, permitted_skills: set[str],
             try:
                 neural = score_neural_candidate(
                     neural_context, list(selected), market="XAUUSD", tactic=tactic_name)
+                if (neural.get("status") == "INFERENCE_AVAILABLE" and (
+                    neural.get("candidate_direction") != proposed.direction.value):
+                    neural = {"status": "DIRECTION_MISMATCH", "recommendation": "ABSTAIN",
+                              "reason": "Model signal direction disagrees with Strategist proposal",
+                              "checkpoint_sha256": neural.get("checkpoint_sha256"),
+                              "guardian_authorised": False}
             except ResearchNeuralError as exc:
                 neural = {"status": "INPUT_GUARD_BLOCKED", "recommendation": "ABSTAIN",
                           "reason": str(exc), "guardian_authorised": False}
