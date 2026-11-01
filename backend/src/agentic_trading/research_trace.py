@@ -20,6 +20,23 @@ from agentic_trading.intelligence import (
 )
 from agentic_trading.research_neural import score_neural_candidate, ResearchNeuralError
 
+class NeuralPredictionInput(BaseModel):
+    """Exactly one historical signal; no next bar or outcome supplied."""
+    student_id: UUID
+    market: Literal["XAUUSD", "BTCUSD"]
+    tactic: Literal["trend", "range", "breakout"]
+    candles: list[SignalCandle] = Field(min_length=5, max_length=10)
+
+    @model_validator(mode="after")
+    def completed(self):
+        if self.candles[-1].available_at > datetime.now(timezone.utc):
+            raise ValueError("Future or uncompleted candle cannot be inferred")
+        if any(b.open_time - a.open_time != timedelta(minutes=15)
+               for a, b in zip(self.candles, self.candles[1:])):
+            raise ValueError("Neural inference needs contiguous closed M15 candles")
+        return self
+
+
 MAX_WINDOW = 192
 MAX_EVALUATIONS = 24
 
