@@ -40,7 +40,9 @@ export function EvolutionTowerScene({agents, events, selectedId, onSelect}:{
     scene.background=new THREE.Color(0x061322)
     scene.fog=new THREE.FogExp2(0x061322,.0028)
     const camera=new THREE.PerspectiveCamera(44,1,.1,1000)
-    camera.position.set(106,155,172)
+    const focus = selectedId ? agents.find(a=>a.id===selectedId) : null
+    const focusY = focus ? Math.max(1,Math.min(99,focus.floor))*HEIGHT : CENTRE
+    camera.position.set(focus ? 42 : 125,focus ? focusY+26 : 165,focus ? 65 : 205)
     const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'low-power'})
     renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7))
     renderer.outputColorSpace=THREE.SRGBColorSpace
@@ -48,7 +50,7 @@ export function EvolutionTowerScene({agents, events, selectedId, onSelect}:{
     renderer.toneMappingExposure=1.55
     host.appendChild(renderer.domElement)
     const controls=new OrbitControls(camera,renderer.domElement)
-    controls.target.set(0,CENTRE*.7,0)
+    controls.target.set(0,focusY,0)
     controls.enableDamping=true
     controls.dampingFactor=.065
     controls.minDistance=18
@@ -135,7 +137,7 @@ export function EvolutionTowerScene({agents, events, selectedId, onSelect}:{
       const radius=5.2+(i>=8?1.3:0)
       group.position.set(Math.cos(angle)*radius, level*HEIGHT+.37,Math.sin(angle)*radius)
       const material=new THREE.MeshStandardMaterial({color:tone(agent),metalness:.5,
-        emissive:tone(agent),emissiveIntensity:agent.id===selectedId?.55:.13,roughness:.35})
+        emissive:tone(agent),emissiveIntensity:agent.id===selectedId ? 0.55 : 0.13,roughness:.35})
       const head=new THREE.Mesh(headGeo,material)
       head.position.y=.72;head.userData.agentId=agent.id
       group.add(head)
