@@ -74,6 +74,10 @@ def test_exact_bid_ask_execution_and_integrity_failure():
     report=replay_bidask(genes,source["bars"][:source["b_end"]])
     assert report["trades"]>0
     assert report["cost_usd"]>0
+    assert report["entry_samples"]
+    assert report["entry_samples"][0]["side"]=="BUY"
+    assert report["entry_samples"][0]["open_time"].endswith("Z")
+    assert report["entry_samples"][0]["price_basis"]=="OBSERVED_SIDE_PLUS_ASSUMED_SLIPPAGE"
     assert report["risk_breached"] is False
     idle=[0.0]*GENES
     idle[88]=5.0  # always hold
@@ -115,4 +119,9 @@ def test_route_requires_opted_in_real_feed_and_csrf(tmp_path,monkeypatch):
                      json={"expected_generation":1})
     assert step.status_code==200,step.text
     assert step.json()["real_generation"]==1
+    diagnostic=step.json()["last_events"][0]["entry_diagnostics"]
+    assert diagnostic["evaluated_agents"]==16
+    assert diagnostic["source_kind"]=="REAL_XAUUSD_BID_ASK_RESEARCH_UNQUALIFIED"
+    assert diagnostic["order_execution"] is False
+    assert "entry_samples" in step.json()["agents"][0]["metrics"]["training"]
     engine.dispose()
