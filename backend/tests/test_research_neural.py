@@ -46,7 +46,7 @@ def test_frozen_snapshot_labels_only_train_development_never_holdout():
     bars = research_bars()
     frozen = build_training_snapshot(bars, market="XAUUSD", tactic="trend",
                                      source_sha256="a"*64, plan_version=1)
-    assert frozen["schema"].endswith(".v1")
+    assert frozen["schema"].endswith(".v2")
     assert frozen["holdout_fraction_unread"] == .2
     assert frozen["source_verified"] is False
     assert frozen["execution_cost_verified"] is False

@@ -41,9 +41,9 @@ from agentic_trading.historical_store import DATABASE_ARTIFACT_PATH, store_histo
 from agentic_trading.historical_demo import build_historical_demo
 from agentic_trading.candle_study import study_candles, CandleStudyError
 from agentic_trading.m15_trade_scenario import study_costed_outcomes
-from agentic_trading.research_trace import TraceBatchInput, inspect_trace_batch
+from agentic_trading.research_trace import TraceBatchInput, NeuralPredictionInput, inspect_trace_batch
 from agentic_trading.research_neural import (create_run as start_neural_run, train_one_epoch,
-    get_run_report, ResearchNeuralError)
+    get_run_report, load_neural_inference, score_neural_candidate, ResearchNeuralError)
 from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, ResearchNeuralRun, new_session_factory
 
 
@@ -572,8 +572,42 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     set(plan.skills) & {"trend", "range", "breakout"})
         if not approved:
             raise HTTPException(status_code=409, detail="Student needs an XAUUSD trend/range/breakout research target")
+        try:
+            model = load_neural_inference(session, student.id, plan_version=plan.version)
+            report = inspect_trace_batch(payload, permitted_skills=approved, neural_context=model)
+        except ResearchNeuralError as exc:
+            raise HTTPException(status_code=409, detail=f"Saved neural model integrity/scope issue: {exc}") from exc
         response.headers["Cache-Control"] = "no-store"
-        return inspect_trace_batch(payload, permitted_skills=approved)
+        return report
+
+    @api.post("/v1/students/{student_id}/neural/predict")
+    def neural_predict(student_id: str, payload: NeuralPredictionInput,
+                       response: Response, user: CEO = Depends(require_csrf),
+                       session: Session = Depends(db)):
+        """Read-only real checkpoint inference. Does not write to strategy or execute."""
+        if str(payload.student_id) != student_id:
+            raise HTTPException(status_code=422, detail="Student request identity mismatch")
+        student = get_student_or_404(student_id, session)
+        plan = max(student.plans, key=lambda p: p.version)
+        if plan.mode == "directed" and (
+            payload.market not in plan.markets or payload.tactic not in plan.skills):
+            raise HTTPException(status_code=409, detail="Neural prediction outside student learning scope")
+        try:
+            model = load_neural_inference(session, student_id, plan_version=plan.version)
+            if not model:
+                raise HTTPException(status_code=409, detail="No saved neural weights yet; train student first")
+            result = score_neural_candidate(
+                model, list(payload.candles), market=payload.market, tactic=payload.tactic)
+        except ResearchNeuralError as exc:
+            raise HTTPException(status_code=409, detail=f"Neural inference guarded: {exc}") from exc
+        response.headers["Cache-Control"] = "no-store"
+        return {
+            "model": result, "student_id": student_id,
+            "research_only": True, "qualified": False,
+            "scout_b_empirically_validated": False,
+            "guardian": "NOT_EVALUATED", "decision": "NO_TRADE",
+            "paper_trading_enabled": False, "live_trading_enabled": False,
+        }
 
     @api.get("/v1/students/{student_id}/candle-study")
     def candle_study(student_id: str, dataset_id: str | None = None,

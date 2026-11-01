@@ -26,7 +26,7 @@ HIDDEN = 16
 EPOCH_LIMIT = 80
 BAR_STEP = timedelta(minutes=15)
 RULES = ("trend", "range", "breakout")
-MODEL_SCHEMA = "research_m15_outcome_mlp8x16x2.v1"
+MODEL_SCHEMA = "research_m15_outcome_mlp8x16x2.v2"
 
 
 class ResearchNeuralError(ValueError):
@@ -105,7 +105,7 @@ def build_training_snapshot(bars: list[dict], *, market: str, tactic: str,
             (close - low_window) / span - 0.5,
             float(side),
             1.0 if market == "BTCUSD" else 0.0,
-            (float(i % 96) / 96) - 0.5,
+            (float((times[i].hour * 60 + times[i].minute) // 15) / 96) - 0.5,
         ]
         features = [float(np.clip(v, -5., 5.)) for v in features]
         entry, exit_price = float(arr[i+1, 0]), float(arr[i+1, 3])
@@ -118,11 +118,16 @@ def build_training_snapshot(bars: list[dict], *, market: str, tactic: str,
     develop = [v for i in range(dev_begin, dev_end) if (v := sample(i)) is not None]
     if len(train) < 80 or len(develop) < 20:
         raise ResearchNeuralError("Insufficient actual closed training examples or development examples")
+    # UTC phase is invariant to weekend closures or missing earlier candles.
+    # Any local non-contiguous signal window is still skipped in sample().
     # No holdout feature, label, outcome or trade is generated, read or persisted.
     frozen = {
         "schema": MODEL_SCHEMA, "source_sha256": source_sha256,
         "market": market, "tactic": tactic, "plan_version": plan_version,
         "bar_count": len(bars),
+        "source_has_m15_gaps": any(b - a != BAR_STEP for a,b in zip(times, times[1:])),
+        "source_start_utc": times[0].isoformat(),
+        "input_ohlc_schema": "completed_m15_ohlc.v1",
         "training_last_utc": train[-1]["available"],
         "development_last_utc": develop[-1]["available"],
         "embargo_bars": 96, "holdout_fraction_unread": 0.2,
@@ -241,7 +246,7 @@ def get_run_report(session: Session, student_id: str, run_id: str | None = None)
     last = checkpoints[-1] if checkpoints else None
     return {
         "run_id": run.id, "student_id": student_id, "market": run.market,
-        "tactic": run.tactic, "model_schema": MODEL_SCHEMA,
+        "tactic": run.tactic, "model_schema": run.frozen_examples.get("schema", "legacy"),
         "epochs_planned": run.epochs_planned, "epoch": last.epoch if last else 0,
         "state": "complete" if last and last.epoch >= run.epochs_planned else "research_training",
         "train_examples": len(run.frozen_examples["train"]),
@@ -255,7 +260,7 @@ def get_run_report(session: Session, student_id: str, run_id: str | None = None)
         "qualification": "unqualified", "independent_holdout_evaluated": False,
         "trained_neural_model": bool(last), "paper_trading_enabled": False,
         "live_trading_enabled": False,
-        "note": "Genuine CPU neural gradient training, immutable database checkpoints. Only TRAIN/development historical labels; no untouched final holdout or broker fills evaluated. Model is unqualified and not connected to the decision pipeline.",
+        "note": "Genuine CPU neural gradient training, immutable database checkpoints. Only TRAIN/development historical labels; no untouched final holdout or broker fills evaluated. Model is unqualified: research-only diagnostic inference is available, but no Guardian authorization or broker route is connected.",
     }
 
 
@@ -265,7 +270,8 @@ def create_run(session: Session, student_id: str, *, market: str,
     # An unfinished saved run can resume from its original frozen snapshot
     # even if a newer public feed later has different candles.
     existing = get_run_report(session, student_id)
-    if existing is not None and existing["state"] != "complete":
+    if (existing is not None and existing["state"] != "complete"
+            and existing["model_schema"] == MODEL_SCHEMA):
         return existing
     frozen = build_training_snapshot(bars, market=market, tactic=tactic,
                                      source_sha256=source_sha256,
@@ -315,3 +321,126 @@ def train_one_epoch(session: Session, student_id: str, run_id: str,
     ))
     session.commit()
     return get_run_report(session, student_id, run_id)
+
+
+
+def load_neural_inference(session: Session, student_id: str,
+                          *, plan_version: int) -> dict | None:
+    """Load the student-owned, hash-verified saved neural checkpoint (no writes).
+
+    Old snapshots lacking a source time origin are rejected, not guessed: the
+    model's phase feature is indexed relative to the original dataset start.
+    """
+    report = get_run_report(session, student_id)
+    if not report or report["epoch"] == 0:
+        return None
+    run = session.get(ResearchNeuralRun, report["run_id"])
+    if not run or run.plan_version != plan_version:
+        raise ResearchNeuralError("Saved neural model belongs to an older learning plan")
+    frozen = run.frozen_examples
+    if frozen.get("schema") != MODEL_SCHEMA or frozen.get("input_ohlc_schema") != "completed_m15_ohlc.v1":
+        raise ResearchNeuralError("Legacy checkpoint has an incompatible input feature schema; retrain required")
+    try:
+        origin = parse_iso_utc(frozen["source_start_utc"])
+        training_end = parse_iso_utc(frozen["training_last_utc"])
+        development_end = parse_iso_utc(frozen["development_last_utc"])
+    except (ValueError, KeyError, TypeError) as exc:
+        raise ResearchNeuralError("Neural model time provenance incomplete") from exc
+    if not origin < training_end < development_end:
+        raise ResearchNeuralError("Neural model snapshot time order invalid")
+    cp = _checkpoint(session, run.id)
+    if not cp or cp.epoch != report["epoch"] or cp.weights_sha256 != report["latest_weights_sha256"]:
+        raise ResearchNeuralError("Neural checkpoint version or hash inconsistent")
+    weights = _restore_weights(cp.weights_npz, cp.weights_sha256)
+    return {
+        "market": run.market, "tactic": run.tactic, "run_id": run.id,
+        "epoch": cp.epoch, "weights_sha256": cp.weights_sha256,
+        "origin": origin, "training_end": training_end,
+        "development_end": development_end,
+        "snapshot_sha256": run.snapshot_sha256, "weights": weights,
+        "model_schema": MODEL_SCHEMA,
+    }
+
+
+def _closed_signal_features(bars: list, market: str, tactic: str,
+                            origin: datetime) -> tuple[np.ndarray, datetime]:
+    """Exactly the eight training-time features; the next candle is never read."""
+    if len(bars) < 5 or market not in ("XAUUSD", "BTCUSD") or tactic not in RULES:
+        raise ResearchNeuralError("No suitable closed M15 context for neural inference")
+    stamps = []
+    prices = []
+    for bar in bars[-5:]:
+        def attr(key):
+            return bar[key] if isinstance(bar, dict) else getattr(bar, key)
+        stamp = parse_iso_utc(attr("open_time")) if isinstance(attr("open_time"), str) else attr("open_time")
+        if stamp.tzinfo is None or stamp.utcoffset() != timedelta(0):
+            raise ResearchNeuralError("Neural candle time must be UTC")
+        row = np.asarray([float(attr(k)) for k in ("open", "high", "low", "close")], dtype=np.float64)
+        if not np.isfinite(row).all() or row.min() <= 0 or row[1] < max(row[0], row[2], row[3]) or row[2] > min(row[0], row[1], row[3]):
+            raise ResearchNeuralError("Neural candle values invalid")
+        stamps.append(stamp)
+        prices.append(row)
+    if any(y - x != BAR_STEP for x,y in zip(stamps, stamps[1:])):
+        raise ResearchNeuralError("M15 gaps prevent neural inference")
+    last = stamps[-1]
+    index_offset = (last - origin).total_seconds() / 900
+    if index_offset < 5 or not index_offset.is_integer():
+        raise ResearchNeuralError("Model input outside frozen dataset alignment")
+    a = np.stack(prices)
+    o, h, l, close = a[-1]
+    prev_close, older_close = a[-2,3], a[-5,3]
+    if abs(close/prev_close - 1) > .04:
+        raise ResearchNeuralError("Abrupt-price guard blocks neural inference")
+    if tactic == "trend":
+        side = np.sign(close-prev_close)
+    elif tactic == "range":
+        side = -np.sign(close-prev_close)
+    else:
+        side = int(close > np.max(a[:-1,1])) - int(close < np.min(a[:-1,2]))
+    if side == 0:
+        raise ResearchNeuralError("No strategy signal for neural inference")
+    low_window, high_window = float(np.min(a[:,2])), float(np.max(a[:,1]))
+    span = max(high_window-low_window, 1e-8)
+    vector = [
+        100 * (close/prev_close - 1),
+        100 * (close/older_close - 1),
+        100 * (close/o - 1),
+        100 * (h-l)/close,
+        (close-low_window)/span-.5,
+        float(side),
+        1.0 if market == "BTCUSD" else 0.0,
+        (float((last.hour * 60 + last.minute) // 15) / 96)-.5,
+    ]
+    return np.asarray([float(np.clip(v, -5, 5)) for v in vector], dtype=np.float64), last+BAR_STEP
+
+
+def score_neural_candidate(context: dict, candles: list, *,
+                           market: str, tactic: str) -> dict:
+    """Model-generated but uncalibrated candidate diagnostics, never order approval."""
+    if context["market"] != market or context["tactic"] != tactic:
+        return {"status": "MODEL_SCOPE_MISMATCH", "recommendation": "ABSTAIN"}
+    vector, available_at = _closed_signal_features(candles, market, tactic, context["origin"])
+    _, _, prediction = _forward(context["weights"], vector.reshape((1, FEATURE_COUNT)))
+    raw = prediction[0]
+    if not np.isfinite(raw).all():
+        raise ResearchNeuralError("Neural prediction nonfinite")
+    probability = float(1 / (1 + np.exp(-np.clip(raw[0], -50, 50))))
+    net_pct = float(raw[1])
+    stage = ("TRAINING_PERIOD_DIAGNOSTIC" if available_at <= context["training_end"] else
+             "DEVELOPMENT_PERIOD_DIAGNOSTIC" if available_at <= context["development_end"] else
+             "POST_DEVELOPMENT_UNVALIDATED")
+    return {
+        "status": "INFERENCE_AVAILABLE", "recommendation":
+            "FAVOUR_RESEARCH" if probability >= .5 and net_pct > 0 else "ABSTAIN",
+        "probability_profit_raw": round(probability, 6),
+        "expected_net_pct_raw": round(net_pct, 6),
+        "prediction_uncalibrated": True, "time_scope": stage,
+        "signal_available_at": available_at.isoformat().replace("+00:00", "Z"),
+        "epoch": context["epoch"], "run_id": context["run_id"],
+        "checkpoint_sha256": context["weights_sha256"],
+        "snapshot_sha256": context["snapshot_sha256"],
+        "feature_sha256": sha256(vector.tobytes()).hexdigest(),
+        "model_schema": context["model_schema"],
+        "candidate_direction": "LONG" if vector[5] > 0 else "SHORT",
+        "guardian_authorised": False,
+    }
