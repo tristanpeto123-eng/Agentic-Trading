@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Activity, BarChart3, BrainCircuit, Play, ShieldAlert, Square, TrendingDown, TrendingUp } from 'lucide-react'
+import { Activity, BarChart3, BrainCircuit, Play, ShieldAlert, Square } from 'lucide-react'
 import { api } from './api'
 import type { Student } from './api'
 import type { Candle } from './HistoricalResearch'
