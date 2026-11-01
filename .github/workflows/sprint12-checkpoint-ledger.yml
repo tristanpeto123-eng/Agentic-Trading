@@ -1,0 +1,22 @@
+name: Sprint 12 checkpoint ledger
+on:
+  pull_request:
+    paths:
+      - 'research/policy_checkpoint_ledger.py'
+      - 'tests/test_policy_checkpoint_ledger.py'
+      - '.github/workflows/sprint12-checkpoint-ledger.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'research/policy_checkpoint_ledger.py'
+      - 'tests/test_policy_checkpoint_ledger.py'
+      - '.github/workflows/sprint12-checkpoint-ledger.yml'
+jobs:
+  checkpoint-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m unittest discover -s tests -p 'test_policy_checkpoint_ledger.py' -v
