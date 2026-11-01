@@ -26,7 +26,7 @@ HIDDEN = 16
 EPOCH_LIMIT = 80
 BAR_STEP = timedelta(minutes=15)
 RULES = ("trend", "range", "breakout")
-MODEL_SCHEMA = "research_m15_outcome_mlp8x16x2.v1"
+MODEL_SCHEMA = "research_m15_outcome_mlp8x16x2.v2"
 
 
 class ResearchNeuralError(ValueError):
@@ -105,7 +105,7 @@ def build_training_snapshot(bars: list[dict], *, market: str, tactic: str,
             (close - low_window) / span - 0.5,
             float(side),
             1.0 if market == "BTCUSD" else 0.0,
-            (float(i % 96) / 96) - 0.5,
+            (float((times[i].hour * 60 + times[i].minute) // 15) / 96) - 0.5,
         ]
         features = [float(np.clip(v, -5., 5.)) for v in features]
         entry, exit_price = float(arr[i+1, 0]), float(arr[i+1, 3])
@@ -118,12 +118,8 @@ def build_training_snapshot(bars: list[dict], *, market: str, tactic: str,
     develop = [v for i in range(dev_begin, dev_end) if (v := sample(i)) is not None]
     if len(train) < 80 or len(develop) < 20:
         raise ResearchNeuralError("Insufficient actual closed training examples or development examples")
-    # Reproducing the training-time index-phase feature from a standalone
-    # signal window is only sound when the source dataset has no M15 holes.
-    # Do not freeze models with weekend or provider gaps until the feature
-    # schema is upgraded to absolute UTC phase.
-    if any(b - a != BAR_STEP for a, b in zip(times, times[1:])):
-        raise ResearchNeuralError('Neural training requires contiguous M15 source for reproducible phase features')
+    # UTC phase is invariant to weekend closures or missing earlier candles.
+    # Any local non-contiguous signal window is still skipped in sample().
     # No holdout feature, label, outcome or trade is generated, read or persisted.
     frozen = {
         "schema": MODEL_SCHEMA, "source_sha256": source_sha256,
@@ -250,7 +246,7 @@ def get_run_report(session: Session, student_id: str, run_id: str | None = None)
     last = checkpoints[-1] if checkpoints else None
     return {
         "run_id": run.id, "student_id": student_id, "market": run.market,
-        "tactic": run.tactic, "model_schema": MODEL_SCHEMA,
+        "tactic": run.tactic, "model_schema": run.frozen_examples.get("schema", "legacy"),
         "epochs_planned": run.epochs_planned, "epoch": last.epoch if last else 0,
         "state": "complete" if last and last.epoch >= run.epochs_planned else "research_training",
         "train_examples": len(run.frozen_examples["train"]),
@@ -342,7 +338,7 @@ def load_neural_inference(session: Session, student_id: str,
         raise ResearchNeuralError("Saved neural model belongs to an older learning plan")
     frozen = run.frozen_examples
     if frozen.get("schema") != MODEL_SCHEMA or frozen.get("input_ohlc_schema") != "completed_m15_ohlc.v1":
-        raise ResearchNeuralError("Legacy checkpoint has no replay-safe input feature origin; retrain required")
+        raise ResearchNeuralError("Legacy checkpoint has an incompatible input feature schema; retrain required")
     try:
         origin = parse_iso_utc(frozen["source_start_utc"])
         training_end = parse_iso_utc(frozen["training_last_utc"])
@@ -412,7 +408,7 @@ def _closed_signal_features(bars: list, market: str, tactic: str,
         (close-low_window)/span-.5,
         float(side),
         1.0 if market == "BTCUSD" else 0.0,
-        (float(int(index_offset) % 96)/96)-.5,
+        (float((last.hour * 60 + last.minute) // 15) / 96)-.5,
     ]
     return np.asarray([float(np.clip(v, -5, 5)) for v in vector], dtype=np.float64), last+BAR_STEP
 
