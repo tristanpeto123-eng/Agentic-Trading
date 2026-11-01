@@ -1,4 +1,4 @@
-"""Bounded synthetic-only evolutionary research tower.
+"""Bounded evolutionary research tower, with quarantined real BID/ASK replay.
 
 The browser is a visualization. This CPU-only module is the authoritative
 deterministic simulator and neural-weight mutation engine. No broker imports.
@@ -189,7 +189,18 @@ def _floor(result: dict, rank: int) -> int:
     return min(49, 21 + (POPULATION-rank)*2)
 
 
-def _grade(genes: list[float], generation: int) -> dict:
+def _grade(genes: list[float], generation: int, real_data: dict | None = None) -> dict:
+    if real_data is not None:
+        from agentic_trading.evolution_tower_real import replay_bidask
+        rows = real_data["bars"]
+        if _digest(rows) != real_data["working_sha256"]:
+            raise TowerError("Immutable real quote tape integrity mismatch")
+        b_rows = rows[:real_data["b_end"]]
+        c_rows = rows[real_data["b_end"]:]
+        b, c = replay_bidask(genes, b_rows), replay_bidask(genes, c_rows)
+        return {"training": b, "selection": c,
+                "source_kind": "REAL_XAUUSD_BID_ASK_RESEARCH_UNQUALIFIED",
+                "slice_b_sha256": _digest(b_rows), "slice_c_sha256": _digest(c_rows)}
     # Separate deterministic toy B and C tapes. The final D tape is never generated.
     b_seed = 340003 + generation*101
     c_seed = 730009 + generation*103
@@ -228,16 +239,18 @@ def advance_state(state: dict) -> tuple[dict,list[dict]]:
         genes=item["genes"]
         if _digest(genes)!=item["genome_sha256"]:
             raise TowerError("Research chromosome integrity mismatch")
-        outcome=_grade(genes,gen)
+        outcome=_grade(genes,gen,state.get("real_data"))
         ranked.append({**item,"metrics":outcome})
-    ranked.sort(key=lambda a:(a["metrics"]["selection"]["risk_breached"],
-                              -a["metrics"]["selection"]["fitness"],a["id"]))
+    # Real C is diagnostic only; repeated selection on C would contaminate it.
+    selection_key = "training" if state.get("real_data") else "selection"
+    ranked.sort(key=lambda a:(a["metrics"][selection_key]["risk_breached"],
+                              -a["metrics"][selection_key]["fitness"],a["id"]))
     # Keep up to half; evict risk failures as well. Never elect a real champion.
     keep_count=len(ranked)//2
     kept=[]
     removed=[]
     for i,item in enumerate(ranked):
-        result=item["metrics"]["selection"]
+        result=item["metrics"][selection_key]
         if i>=keep_count or result["risk_breached"]:
             removed.append({**item,"from_floor":item["floor"],"floor":0,"status":"archived",
                             "reason":result["death_reason"] or "SELECTION"})
@@ -256,26 +269,71 @@ def advance_state(state: dict) -> tuple[dict,list[dict]]:
                "status":"nursery","metrics":None}
         births.append(child)
     next_state={**state,"generation":gen,"population":kept+births,
+                "real_generation":(state.get("real_generation",0)+1 if state.get("real_data") else None),
                 "total_born":state["total_born"]+len(births),
                 "total_culled":state["total_culled"]+len(removed)}
     events=[{"type":"GENERATION_EVALUATED","generation":gen,"kept_ids":[x["id"] for x in kept],
              "removed":[{"id":r["id"],"from_floor":r["from_floor"],"reason":r["reason"],
-                         "selection":r["metrics"]["selection"]} for r in removed],
+                         "selection":r["metrics"][selection_key]} for r in removed],
              "born":[{"id":b["id"],"parent_id":b["parent_id"]} for b in births],
              "source_kind":"SYNTHETIC_RANDOM_WALK_ONLY",
-             "selection_is_not_validation":True}]
+             "selection_is_not_validation":True,
+             "ranking_source":selection_key,
+             "source_sha256":state.get("real_data",{}).get("source_sha256")}]
     return next_state,events
 
 
+
+def activate_real_history(state: dict, snapshot: dict) -> tuple[dict, list[dict]]:
+    """Explicitly switch the EXISTING cohort to immutable real quotes.
+
+    Prior synthetic generations and archive survive. Real generations start at
+    zero but the monotonic generation ID continues, avoiding archive collisions.
+    """
+    from agentic_trading.evolution_tower_real import validated_research_snapshot
+    if state.get("schema") != "atl_evolution_tower.v1":
+        raise TowerError("Unknown evolution tower schema")
+    if state.get("real_data") is not None:
+        raise TowerError("Real research source is already frozen; no cherry-picking replacement")
+    if state["generation"] >= GENERATION_LIMIT-1:
+        raise TowerError("Generation limit leaves no room to activate real history")
+    real_data = validated_research_snapshot(snapshot)
+    next_generation = state["generation"] + 1
+    population = [{**agent, "metrics":None, "floor":1, "status":"nursery"}
+                  for agent in state["population"]]
+    next_state = {**state, "generation":next_generation,
+                  "real_generation":0, "real_data":real_data,
+                  "mode":"REAL_XAUUSD_BID_ASK_RESEARCH",
+                  "population":population}
+    event = {
+        "type":"HISTORICAL_MODE_ACTIVATED", "generation":next_generation,
+        "kept_ids":[a["id"] for a in population], "removed":[], "born":[],
+        "source_kind":"REAL_XAUUSD_BID_ASK_RESEARCH_UNQUALIFIED",
+        "source_sha256":real_data["source_sha256"],
+        "working_sha256":real_data["working_sha256"],
+        "provider":real_data["provider"], "ranking_source":"training",
+        "selection_is_not_validation":True,
+    }
+    return next_state, [event]
+
 def public_state(state: dict, events: list[dict]|None=None) -> dict:
     """Never expose strategy chromosomes or any qualification claim to browser."""
+    real_data = state.get("real_data")
     return {
-        **{k:v for k,v in state.items() if k!="population"},
+        **{k:v for k,v in state.items() if k not in ("population", "real_data")},
         "agents":[{k:v for k,v in agent.items() if k!="genes"}
                   for agent in state["population"]],
         "last_events":events or [],
         "champions":[],"penthouse_locked":True,"qualification":"unqualified",
-        "baseline":"FLAT_ZERO_TRADE","performance_kind":"TOY_SYNTHETIC_ONLY",
+        "baseline":"FLAT_ZERO_TRADE",
+        "performance_kind":"REAL_HISTORICAL_QUOTES_UNQUALIFIED" if real_data else "TOY_SYNTHETIC_ONLY",
+        "research_data":({k:v for k,v in real_data.items() if k!="bars"} if real_data else None),
         "worker_mode":"MANUAL_OR_BROWSER_OPEN","final_slice_d_accessed":False,
-        "note":"Research demonstration on deterministic synthetic random walks. Floor reflects relative toy-simulation fitness, not a market edge. No broker, independent alpha or background VPS worker.",
+        "note":("Historical XAUUSD bid/ask replay with assumed slippage, fees and financing. "
+                "B is used for evolution; C is repeatedly observed for diagnostics and cannot "
+                "be independent validation; D is withheld. No demonstrated edge or trading authority."
+                if real_data else
+                "Research demonstration on deterministic synthetic random walks. "
+                "Floor reflects relative toy-simulation fitness, not a market edge. "
+                "No broker, independent alpha or background VPS worker."),
     }
