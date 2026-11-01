@@ -69,7 +69,7 @@ def _brain(genes: list[float], features: list[float]) -> int:
     return max(range(4), key=lambda k: output[k])
 
 
-def evaluate(genes: list[float], tape: list[float]) -> dict:
+def evaluate(genes: list[float], tape: list[float], *, capture_behavior: bool = False) -> dict:
     """Costed pathwise simulation with an independent, immutable risk ceiling.
 
     Signals on t are executed at the NEXT closed-price observation with
@@ -92,6 +92,14 @@ def evaluate(genes: list[float], tape: list[float]) -> dict:
     ended = False
     reason = None
     held_bars = 0
+    # Optional side-channel from the authoritative replay. No fake fills,
+    # changed strategy actions, reward shaping, or mutation of risk controls.
+    # Default is off to keep the existing training hot path unchanged.
+    actions = {"HOLD": 0, "BUY": 0, "SELL": 0, "CLOSE": 0} if capture_behavior else None
+    decision_digest = sha256() if capture_behavior else None
+    flat_abstentions = 0
+    redundant_directional_signals = 0
+    reversals = 0
     for i in range(24, len(tape)-1):
         current = tape[i]
         next_price = tape[i+1]
@@ -109,6 +117,15 @@ def evaluate(genes: list[float], tape: list[float]) -> dict:
         desired_sign = (1 if action == 1 else -1 if action == 2 else
                         0 if action == 3 else (1 if pos>0 else -1 if pos<0 else 0))
         current_sign = 1 if pos>0 else -1 if pos<0 else 0
+        if capture_behavior:
+            actions[("HOLD", "BUY", "SELL", "CLOSE")[action]] += 1
+            decision_digest.update(bytes((action, current_sign + 1, desired_sign + 1)))
+            if current_sign == 0 and desired_sign == 0:
+                flat_abstentions += 1
+            if current_sign != 0 and action in (1, 2) and desired_sign == current_sign:
+                redundant_directional_signals += 1
+            if current_sign != 0 and desired_sign != 0 and desired_sign != current_sign:
+                reversals += 1
         # Do not allow a learner to change leverage, maintenance or drawdown.
         if desired_sign != current_sign:
             if pos:
@@ -174,7 +191,7 @@ def evaluate(genes: list[float], tape: list[float]) -> dict:
     # Reject excessive gambling. Sortino-style score remains finite and bounded.
     sortino = max(-10.,min(10.,ret/max(0.001,downside_deviation*math.sqrt(len(tape)))))
     fitness = max(-100., min(100.,ret*100 - 2.5*max_dd*100 + .1*sortino - .025*trades))
-    return {
+    report = {
         "equity": round(equity, 4), "return_pct": round(ret*100, 4),
         "drawdown_pct": round(max_dd*100, 4), "trades": trades,
         "closed_trades": closed, "wins": wins,
@@ -184,6 +201,21 @@ def evaluate(genes: list[float], tape: list[float]) -> dict:
         "risk_breached": ended,
         "death_reason": reason,
     }
+    if capture_behavior:
+        report["behavior"] = {
+            "schema": "atl_decision_trace.v1",
+            "decision_bars": sum(actions.values()),
+            "action_counts": actions,
+            "flat_abstentions": flat_abstentions,
+            "redundant_directional_signals": redundant_directional_signals,
+            "reversals": reversals,
+            "entries": trades,
+            "closed_positions": closed,
+            "decision_sha256": decision_digest.hexdigest(),
+            "research_only": True,
+            "broker_orders": 0,
+        }
+    return report
 
 
 def _new_genes(rng: random.Random, *, explore_side: str | None = None) -> list[float]:
