@@ -118,11 +118,18 @@ def build_training_snapshot(bars: list[dict], *, market: str, tactic: str,
     develop = [v for i in range(dev_begin, dev_end) if (v := sample(i)) is not None]
     if len(train) < 80 or len(develop) < 20:
         raise ResearchNeuralError("Insufficient actual closed training examples or development examples")
+    # Reproducing the training-time index-phase feature from a standalone
+    # signal window is only sound when the source dataset has no M15 holes.
+    # Do not freeze models with weekend or provider gaps until the feature
+    # schema is upgraded to absolute UTC phase.
+    if any(b - a != BAR_STEP for a, b in zip(times, times[1:])):
+        raise ResearchNeuralError('Neural training requires contiguous M15 source for reproducible phase features')
     # No holdout feature, label, outcome or trade is generated, read or persisted.
     frozen = {
         "schema": MODEL_SCHEMA, "source_sha256": source_sha256,
         "market": market, "tactic": tactic, "plan_version": plan_version,
         "bar_count": len(bars),
+        "source_has_m15_gaps": any(b - a != BAR_STEP for a,b in zip(times, times[1:])),
         "source_start_utc": times[0].isoformat(),
         "input_ohlc_schema": "completed_m15_ohlc.v1",
         "training_last_utc": train[-1]["available"],
@@ -437,5 +444,6 @@ def score_neural_candidate(context: dict, candles: list, *,
         "snapshot_sha256": context["snapshot_sha256"],
         "feature_sha256": sha256(vector.tobytes()).hexdigest(),
         "model_schema": context["model_schema"],
+        "candidate_direction": "LONG" if vector[5] > 0 else "SHORT",
         "guardian_authorised": False,
     }
