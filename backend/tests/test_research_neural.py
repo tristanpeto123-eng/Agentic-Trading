@@ -1,7 +1,5 @@
 """Persistent neural research training tests: real gradients, restarts and safety."""
 from datetime import datetime, timedelta, timezone
-from hashlib import sha256
-import importlib
 import math
 from uuid import uuid4
 
@@ -13,9 +11,7 @@ from agentic_trading.research_neural import (
     get_run_report, train_one_epoch,
 )
 from agentic_trading.storage import Base, LearningPlan, ResearchNeuralEpoch, Student, new_session_factory
-from test_historical_render import _setup
-
-api_module = importlib.import_module("agentic_trading.api")
+from test_historical_render import _setup, _source
 
 
 def research_bars(n=1400):
@@ -140,12 +136,14 @@ def test_authenticated_neural_flow_no_broker_or_policy_write(tmp_path, monkeypat
     client, headers, factory, engine = _setup(tmp_path, monkeypatch)
     student_id = make_student(factory)
     bars = research_bars()
-    calls = []
-    def fake_source(sid, response, user_info, session):
-        calls.append(sid)
-        return {"market": "XAUUSD", "source_sha256": "d"*64,
-                "bars": bars, "training_kind": "historical_policy_replay"}
-    monkeypatch.setattr(api_module, "student_training_source", fake_source)
+    csv_lines = ["timestamp_open,open,high,low,close,volume"]
+    csv_lines.extend(",".join([row["open_time"], row["open"], row["high"],
+                               row["low"], row["close"], row["volume"]])
+                     for row in bars)
+    uploaded = client.post("/v1/datasets/import", headers=headers,
+                           json={"source": _source(),
+                                 "csv_content": "\n".join(csv_lines)+"\n"})
+    assert uploaded.status_code == 201, uploaded.text
     base = "/v1/students/" + student_id + "/neural"
     assert client.get(base+"/latest").status_code == 200
     assert client.get(base+"/latest").json()["run"] is None
@@ -154,7 +152,6 @@ def test_authenticated_neural_flow_no_broker_or_policy_write(tmp_path, monkeypat
     assert started.status_code == 200, started.text
     first = started.json()
     assert first["epoch"] == 0 and first["qualification"] == "unqualified"
-    assert calls == [student_id]
     epoch = client.post(base+"/"+first["run_id"]+"/epoch",
                         headers=headers, json={"expected_epoch":0})
     assert epoch.status_code == 200, epoch.text
