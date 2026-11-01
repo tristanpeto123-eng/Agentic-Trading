@@ -1,0 +1,23 @@
+name: Sprint 12 costed replay
+on:
+  pull_request:
+    paths:
+      - 'research/costed_bid_ask_replay.py'
+      - 'tests/test_costed_bid_ask_replay.py'
+      - '.github/workflows/sprint12-costed-replay.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'research/costed_bid_ask_replay.py'
+      - 'tests/test_costed_bid_ask_replay.py'
+      - '.github/workflows/sprint12-costed-replay.yml'
+jobs:
+  replay-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Costed replay unit tests
+        run: python -m unittest discover -s tests -p 'test_costed_bid_ask_replay.py' -v
