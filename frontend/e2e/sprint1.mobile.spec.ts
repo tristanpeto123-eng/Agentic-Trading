@@ -18,7 +18,7 @@ test('mobile CEO login, student lifecycle, and disabled trading', async ({ page 
   await expect(page.getByText(/No operational broker account or trading permission is active/)).toBeVisible()
   await expect(page.getByText('Historical research is available')).toBeVisible()
   await page.getByRole('button', { name: 'Open Historical replay' }).click()
-  await expect(page.getByRole('heading', { name: 'Historical Simulation' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Train a student' })).toBeVisible()
   await page.locator('nav.bottom-nav').getByRole('button', { name: 'Home' }).click()
   await page.screenshot({ path: 'screenshots/01-home-mobile.png', fullPage: true })
 
