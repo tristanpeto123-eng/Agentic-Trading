@@ -23,6 +23,7 @@ test('iPhone M1 BID/ASK quote inspector is local, aligned and explicitly unquali
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button', { name: 'Access console' }).click()
   await page.locator('nav.bottom-nav').getByRole('button', { name: 'Trading' }).click()
+  await page.getByText('Advanced tools · historical replay, data & paper account').click()
   await page.getByText('Advanced tools · saved data, M1 quotes & engine demonstrations').click()
   await expect(page.getByRole('heading', { name: 'Inspect matching XAU/USD M1 quotes' })).toBeVisible()
   await page.getByLabel('BID · M1 CSV').setInputFiles({
@@ -45,6 +46,7 @@ test('iPhone M1 BID/ASK refuses nonmatching and crossed opening quotes', async (
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button', { name: 'Access console' }).click()
   await page.locator('nav.bottom-nav').getByRole('button', { name: 'Trading' }).click()
+  await page.getByText('Advanced tools · historical replay, data & paper account').click()
   await page.getByText('Advanced tools · saved data, M1 quotes & engine demonstrations').click()
 
   await page.getByLabel('BID · M1 CSV').setInputFiles({
