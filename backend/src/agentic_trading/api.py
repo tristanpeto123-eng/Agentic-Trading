@@ -42,6 +42,8 @@ from agentic_trading.historical_demo import build_historical_demo
 from agentic_trading.candle_study import study_candles, CandleStudyError
 from agentic_trading.m15_trade_scenario import study_costed_outcomes
 from agentic_trading.research_trace import TraceBatchInput, inspect_trace_batch
+from agentic_trading.research_neural import (create_run as start_neural_run, train_one_epoch,
+    get_run_report, ResearchNeuralError)
 from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, new_session_factory
 
 
@@ -137,6 +139,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "skills_catalog_enabled": True, "episodic_memory_read_enabled": True,
             "independent_skill_mastery_enabled": False, "automatic_memory_ingest_enabled": False,
             "offline_neural_research_training_available": True, "automatic_training_enabled": False,
+            "incremental_persistent_neural_research_enabled": True, "research_checkpoint_database_backed": True,
             "independent_examiner_enabled": False,
             "offline_research_examiner_available": True, "academy_scheduler_available": True, "strategy_dna_read_enabled": True, "peer_research_lessons_enabled": True, "sentinel_read_enabled": True, "emergency_stop_enabled": True, "paper_readiness_report_enabled": True, "paper_account_readonly_available": True, "independent_examination_qualification_enabled": False,
         }
@@ -242,6 +245,72 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "persisted": False, "model_training_performed": False,
             "note": "Private research-only imported BTC M15 aggregates. Not saved, broker fills, executable quotes, neural training or approved trading. Provider conditions still apply.",
         }
+
+    @api.get("/v1/students/{student_id}/neural/latest")
+    def latest_research_neural(student_id: str, response: Response,
+                             _: tuple[CEO, dict] = Depends(current_ceo),
+                             session: Session = Depends(db)):
+        get_student_or_404(student_id, session)
+        response.headers["Cache-Control"] = "no-store"
+        try:
+            return {"run": get_run_report(session, student_id)}
+        except ResearchNeuralError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    @api.post("/v1/students/{student_id}/neural/start")
+    def start_research_neural(student_id: str, response: Response,
+                            user: CEO = Depends(require_csrf),
+                            session: Session = Depends(db)):
+        """One click: resume frozen evidence or import new history and start an experiment.
+
+        CPU-only, no broker route, no trading qualification. Browser drives one
+        bounded epoch per request; every epoch persists before next request.
+        """
+        student = get_student_or_404(student_id, session)
+        try:
+            saved = get_run_report(session, student_id)
+        except ResearchNeuralError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        if saved is not None and saved["state"] != "complete":
+            response.headers["Cache-Control"] = "no-store"
+            return saved
+        plan = max(student.plans, key=lambda row: row.version)
+        permitted = ("trend", "range", "breakout") if plan.mode == "autonomous" else (
+            tuple(skill for skill in ("trend", "range", "breakout") if skill in plan.skills))
+        if not permitted:
+            raise HTTPException(status_code=409, detail="Student has no supported research strategy")
+        # Reuse the verified student/source selection path. Its response is
+        # unqualified by design. It reads no model or order credentials.
+        selection = student_training_source(student_id, response, (user, {}), session)
+        try:
+            result = start_neural_run(
+                session, student_id,
+                market=selection["market"], tactic=permitted[0],
+                plan_version=plan.version, bars=selection["bars"],
+                source_sha256=selection["source_sha256"],
+            )
+        except ResearchNeuralError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        response.headers["Cache-Control"] = "no-store"
+        return result
+
+    @api.post("/v1/students/{student_id}/neural/{run_id}/epoch")
+    def advance_research_neural(student_id: str, run_id: str, payload: dict,
+                                response: Response, _: CEO = Depends(require_csrf),
+                                session: Session = Depends(db)):
+        """Idempotence guarded by expected_epoch; no file writes or broker orders."""
+        get_student_or_404(student_id, session)
+        if set(payload) != {"expected_epoch"} or type(payload.get("expected_epoch")) is not int:
+            raise HTTPException(status_code=422, detail="Expected numeric epoch required")
+        if not 0 <= payload["expected_epoch"] < 80:
+            raise HTTPException(status_code=422, detail="Epoch out of bounds")
+        try:
+            report = train_one_epoch(session, student_id, run_id, payload["expected_epoch"])
+        except ResearchNeuralError as exc:
+            session.rollback()
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        response.headers["Cache-Control"] = "no-store"
+        return report
 
     @api.get("/v1/students/{student_id}/train-data")
     def student_training_source(student_id: str, response: Response,
