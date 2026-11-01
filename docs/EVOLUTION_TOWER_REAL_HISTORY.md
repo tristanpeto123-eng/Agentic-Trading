@@ -58,3 +58,31 @@ backend must separately have provider authorization, network access and the
 environment settings above; the real source and hash are displayed in the UI.
 Until those exist, the deployed tower remains in its previously saved synthetic
 mode and accurately reports that limitation.
+
+## Entry-generation diagnosis (research-only)
+
+- A bot proposing HOLD or CLOSE while flat makes **zero actual replay
+  entries**; neither proposal is counted as a hypothetical fill. We never
+  create synthetic fill records to make the dashboard seem active.
+- The selection engine evaluates **B**, while **C** is monitored only. The
+  previous inspector showed C entries alone and could misleadingly display
+  zero even when B placed hypothetical entries. The inspector now displays
+  B and C counts separately and up to five timestamped B entry samples.
+- The generation audit also shows total B/C hypothetical entries and the
+  number of inactive agents in each partition. It includes all assessed
+  agents, including bots later archived, not just surviving robots.
+- Initial research-only neural chromosomes include deterministic BUY/SELL
+  exploration biases alongside unmodified random candidates. Existing saved
+  chromosome hashes and user state are **not** rewritten.
+- When no positive active parent exists, a **new directional explorer** is
+  created upon an actual vacancy (after probation or risk retirement).
+  Explorers are not force-traded; their actions are still chosen by their
+  neural weights and evaluated against risk/cost rules.
+- Flat inactive bots are prioritised among already-probation-eligible
+  retirements (maximum two non-risk retirements per generation). This
+  encourages trying alternatives without deleting the whole cohort.
+- Every entry record is explicitly hypothetical, costs remain estimates,
+  and **no live, paper or practice broker order is submitted**. Observed
+  BID/ASK data is historical research input, not a broker execution link.
+- The system does not claim a profitable edge: promoting an inactive bot to
+  an entry-capable bot is an exploration improvement, not validated alpha.
