@@ -43,7 +43,7 @@ from agentic_trading.candle_study import study_candles, CandleStudyError
 from agentic_trading.m15_trade_scenario import study_costed_outcomes
 from agentic_trading.research_trace import TraceBatchInput, NeuralPredictionInput, inspect_trace_batch
 from agentic_trading.research_neural import (create_run as start_neural_run, train_one_epoch,
-    get_run_report, load_neural_inference, score_neural_candidate, ResearchNeuralError)
+    get_run_report, load_neural_inference, score_neural_candidate, ResearchNeuralError, MODEL_SCHEMA)
 from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, ResearchNeuralRun, new_session_factory
 
 
@@ -272,7 +272,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except ResearchNeuralError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         plan = max(student.plans, key=lambda row: row.version)
-        if saved is not None and saved["state"] != "complete":
+        if (saved is not None and saved["state"] != "complete"
+                and saved["model_schema"] == MODEL_SCHEMA):
             frozen_run = session.get(ResearchNeuralRun, saved["run_id"])
             if frozen_run.plan_version != plan.version:
                 raise HTTPException(status_code=409, detail="Saved neural run uses an older student learning plan; CEO review required")
