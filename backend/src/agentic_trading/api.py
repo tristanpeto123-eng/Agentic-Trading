@@ -33,6 +33,7 @@ from agentic_trading.policy_checkpoint import research_policy_history, PolicyRes
 from agentic_trading.evolution import student_evolution, peer_lessons, mentorship_eligibility, EvolutionError
 from agentic_trading.evolution_tower import (
     initial_state as initial_tower, advance_state as advance_tower,
+    activate_real_history as activate_real_tower,
     public_state as public_tower, _digest as tower_digest, TowerError,
 )
 from agentic_trading.sentinel import scan_health, engage_stop, safety_latch, SentinelError
@@ -188,6 +189,58 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {"initialized": True, "research_only": True,
                 **public_tower(record.state, _tower_events(session, record.id)),
                 "state_sha256": record.state_sha256}
+
+    @api.post("/v1/evolution-tower/use-real-history")
+    def use_real_evolution_history(payload: dict, response: Response,
+                                   ceo: CEO = Depends(require_csrf),
+                                   session: Session = Depends(db)):
+        """Owner-triggered historical XAUUSD research only. No broker orders."""
+        if (set(payload) != {"expected_generation", "source"} or
+                type(payload.get("expected_generation")) is not int or
+                payload.get("source") not in ("oanda", "dukascopy")):
+            raise HTTPException(status_code=422, detail="Expected generation and XAUUSD source (oanda/dukascopy) required")
+        source = payload["source"]
+        if source == "oanda":
+            if os.environ.get("ATL_OANDA_PRACTICE_RESEARCH", "0") != "1":
+                raise HTTPException(status_code=409, detail="OANDA practice XAUUSD research is disabled; enable approved private provider settings")
+            try:
+                snapshot = fetch_oanda_practice(token=os.environ.get("OANDA_V20_PRACTICE_TOKEN", ""))
+            except QuoteSourceError as exc:
+                raise HTTPException(status_code=503, detail=f"OANDA real quote import failed: {exc}") from exc
+        else:
+            if os.environ.get("ATL_DUKASCOPY_RESEARCH_DOWNLOAD", "0") != "1":
+                raise HTTPException(status_code=409, detail="Dukascopy XAUUSD research is disabled pending private data-use review")
+            try:
+                snapshot = fetch_dukascopy_research(
+                    cache_dir=data_root / "dukascopy-cache", download=True)
+            except QuoteSourceError as exc:
+                raise HTTPException(status_code=503, detail=f"Dukascopy real quote import failed: {exc}") from exc
+        record = _read_tower(session, ceo.id, locked=True)
+        if record is None:
+            raise HTTPException(status_code=409, detail="Create the Evolution Tower population first")
+        if payload["expected_generation"] != record.generation:
+            raise HTTPException(status_code=409, detail="Generation changed while fetching quotes; refresh")
+        try:
+            updated, events = activate_real_tower(record.state, snapshot)
+        except TowerError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        event = events[0]
+        record.state = updated
+        record.generation = updated["generation"]
+        record.state_sha256 = tower_digest(updated)
+        record.updated_at = datetime.now(timezone.utc)
+        session.add(EvolutionTowerArchive(
+            session_id=record.id, generation=record.generation,
+            event=event, event_sha256=tower_digest(event)))
+        try:
+            session.commit()
+        except IntegrityError as exc:
+            session.rollback()
+            raise HTTPException(status_code=409, detail="Concurrent history activation blocked") from exc
+        response.headers["Cache-Control"] = "no-store"
+        return {"initialized": True, "research_only": True,
+                **public_tower(updated, _tower_events(session, record.id)),
+                "state_sha256":record.state_sha256}
 
     @api.post("/v1/evolution-tower/advance")
     def step_evolution_tower(payload: dict, response: Response,

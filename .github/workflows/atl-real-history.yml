@@ -1,0 +1,39 @@
+name: ATL historical XAU bid-ask research checks
+on:
+  push:
+    paths:
+      - 'backend/src/agentic_trading/evolution_tower*.py'
+      - 'backend/src/agentic_trading/api.py'
+      - 'backend/tests/test_evolution_tower*.py'
+      - 'frontend/src/EvolutionTower*'
+      - '.github/workflows/atl-real-history.yml'
+  pull_request:
+    paths:
+      - 'backend/src/agentic_trading/evolution_tower*.py'
+      - 'backend/src/agentic_trading/api.py'
+      - 'backend/tests/test_evolution_tower*.py'
+      - 'frontend/src/EvolutionTower*'
+      - '.github/workflows/atl-real-history.yml'
+  workflow_dispatch:
+jobs:
+  read-only-replay-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install backend
+        run: |
+          python -m pip install -e './backend[dev]'
+          python -m pip install 'numpy>=1.26,<3'
+      - name: Verify source, data leakage and API gates without broker access
+        run: python -m pytest backend/tests/test_evolution_tower_real.py backend/tests/test_evolution_tower.py -q
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Type-check and build mobile frontend
+        working-directory: frontend
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
