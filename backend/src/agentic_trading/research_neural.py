@@ -270,7 +270,8 @@ def create_run(session: Session, student_id: str, *, market: str,
     # An unfinished saved run can resume from its original frozen snapshot
     # even if a newer public feed later has different candles.
     existing = get_run_report(session, student_id)
-    if existing is not None and existing["state"] != "complete":
+    if (existing is not None and existing["state"] != "complete"
+            and existing["model_schema"] == MODEL_SCHEMA):
         return existing
     frozen = build_training_snapshot(bars, market=market, tactic=tactic,
                                      source_sha256=source_sha256,
