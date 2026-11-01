@@ -31,6 +31,10 @@ from agentic_trading.examiner import student_exam_history, ExaminationError
 from agentic_trading.academy import lesson_plan, student_jobs, AcademyError
 from agentic_trading.policy_checkpoint import research_policy_history, PolicyResearchError
 from agentic_trading.evolution import student_evolution, peer_lessons, mentorship_eligibility, EvolutionError
+from agentic_trading.evolution_tower import (
+    initial_state as initial_tower, advance_state as advance_tower,
+    public_state as public_tower, _digest as tower_digest, TowerError,
+)
 from agentic_trading.sentinel import scan_health, engage_stop, safety_latch, SentinelError
 from agentic_trading.paper_readiness import evaluate_readiness, paper_requests, PaperReadinessError
 from agentic_trading.providers.alpaca_paper_readonly import preview_btc_paper, PaperPreviewError
@@ -47,7 +51,7 @@ from agentic_trading.m15_trade_scenario import study_costed_outcomes
 from agentic_trading.research_trace import TraceBatchInput, NeuralPredictionInput, inspect_trace_batch
 from agentic_trading.research_neural import (create_run as start_neural_run, train_one_epoch,
     get_run_report, load_neural_inference, score_neural_candidate, ResearchNeuralError, MODEL_SCHEMA)
-from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, ResearchNeuralRun, new_session_factory
+from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, ResearchNeuralRun, EvolutionTowerSession, EvolutionTowerArchive, new_session_factory
 
 
 class LoginLimiter:
@@ -131,6 +135,95 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def health():
         return {"status": "ok", "component": "api", "sprint": "S11"}
 
+    def _read_tower(session: Session, ceo_id: str, *, locked: bool = False):
+        query = select(EvolutionTowerSession).where(EvolutionTowerSession.ceo_id == ceo_id)
+        if locked:
+            query = query.with_for_update()
+        record = session.scalar(query)
+        if record is not None and record.state_sha256 != tower_digest(record.state):
+            raise HTTPException(status_code=409, detail="Evolution Tower state integrity mismatch")
+        return record
+
+    def _tower_events(session: Session, session_id: str) -> list[dict]:
+        records = session.scalars(
+            select(EvolutionTowerArchive)
+            .where(EvolutionTowerArchive.session_id == session_id)
+            .order_by(EvolutionTowerArchive.generation.desc()).limit(20)
+        ).all()
+        if any(event.event_sha256 != tower_digest(event.event) for event in records):
+            raise HTTPException(status_code=409, detail="Evolution archive integrity mismatch")
+        return [record.event for record in records]
+
+    @api.get("/v1/evolution-tower")
+    def get_evolution_tower(response: Response,
+                            ceo_info: tuple[CEO, dict] = Depends(current_ceo),
+                            session: Session = Depends(db)):
+        response.headers["Cache-Control"] = "no-store"
+        record = _read_tower(session, ceo_info[0].id)
+        if record is None:
+            return {"initialized": False, "research_only": True, "paper_trading_enabled": False,
+                    "live_trading_enabled": False, "penthouse_locked": True,
+                    "population_size": 16}
+        return {"initialized": True, "research_only": True,
+                **public_tower(record.state, _tower_events(session, record.id)),
+                "state_sha256": record.state_sha256}
+
+    @api.post("/v1/evolution-tower/start")
+    def start_evolution_tower(response: Response, _: CEO = Depends(require_csrf),
+                             session: Session = Depends(db)):
+        """Create one durable research cohort, never overwrite existing chromosomes."""
+        record = _read_tower(session, _.id, locked=True)
+        if record is None:
+            state = initial_tower()
+            record = EvolutionTowerSession(
+                ceo_id=_.id, generation=0, state=state, state_sha256=tower_digest(state))
+            session.add(record)
+            try:
+                session.commit()
+            except IntegrityError as exc:
+                session.rollback()
+                raise HTTPException(status_code=409,
+                                    detail="Evolution cohort was already initialized; refresh") from exc
+        response.headers["Cache-Control"] = "no-store"
+        return {"initialized": True, "research_only": True,
+                **public_tower(record.state, _tower_events(session, record.id)),
+                "state_sha256": record.state_sha256}
+
+    @api.post("/v1/evolution-tower/advance")
+    def step_evolution_tower(payload: dict, response: Response,
+                            ceo: CEO = Depends(require_csrf),
+                            session: Session = Depends(db)):
+        """One bounded generation per request, never runs or connects a broker."""
+        if set(payload) != {"expected_generation"} or type(payload.get("expected_generation")) is not int:
+            raise HTTPException(status_code=422, detail="Expected generation integer required")
+        record = _read_tower(session, ceo.id, locked=True)
+        if record is None:
+            raise HTTPException(status_code=409, detail="Create research cohort first")
+        if payload["expected_generation"] != record.generation:
+            raise HTTPException(status_code=409, detail="Generation changed; reload authoritative tower state")
+        try:
+            updated, events = advance_tower(record.state)
+        except TowerError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        event = events[0]
+        record.state = updated
+        record.state_sha256 = tower_digest(updated)
+        record.generation = updated["generation"]
+        record.updated_at = datetime.now(timezone.utc)
+        session.add(EvolutionTowerArchive(
+            session_id=record.id, generation=record.generation,
+            event=event, event_sha256=tower_digest(event)))
+        try:
+            session.commit()
+        except IntegrityError as exc:
+            session.rollback()
+            raise HTTPException(status_code=409,
+                                detail="Concurrent generation already committed") from exc
+        response.headers["Cache-Control"] = "no-store"
+        return {"initialized": True, "research_only": True,
+                **public_tower(updated, _tower_events(session, record.id)),
+                "state_sha256": record.state_sha256}
+
     @api.get("/v1/capabilities")
     def capabilities():
         return {
@@ -142,6 +235,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "skills_catalog_enabled": True, "episodic_memory_read_enabled": True,
             "independent_skill_mastery_enabled": False, "automatic_memory_ingest_enabled": False,
             "offline_neural_research_training_available": True, "automatic_training_enabled": False,
+            "evolution_tower_synthetic_demo_enabled": True, "evolution_tower_background_worker_enabled": False,
             "incremental_persistent_neural_research_enabled": True, "research_checkpoint_database_backed": True,
             "independent_examiner_enabled": False,
             "offline_research_examiner_available": True, "academy_scheduler_available": True, "strategy_dna_read_enabled": True, "peer_research_lessons_enabled": True, "sentinel_read_enabled": True, "emergency_stop_enabled": True, "paper_readiness_report_enabled": True, "paper_account_readonly_available": True, "independent_examination_qualification_enabled": False,
