@@ -103,6 +103,7 @@ def replay_bidask(genes: list[float], bars: list[dict]) -> dict:
     pos = 0.0
     max_dd = 0.0
     trades, closed, wins = 0, 0, 0
+    entry_samples = []
     cost_total = 0.0
     prev_trade_value = START_EQUITY
     downside = []
@@ -155,6 +156,13 @@ def replay_bidask(genes: list[float], bars: list[dict]) -> dict:
                 cash -= fee
                 cost_total += fee + qty*abs(entry_price-mid_open)
                 trades += 1
+                if len(entry_samples) < 5:
+                    entry_samples.append({
+                        "open_time":nxt["open_time"],
+                        "side":"BUY" if desired_sign>0 else "SELL",
+                        "price":round(entry_price,5),
+                        "price_basis":"OBSERVED_SIDE_PLUS_ASSUMED_SLIPPAGE",
+                    })
         # Explicitly approximate financing; not a sourced broker rollover schedule.
         trading_date = nxt["open_time"][:10]
         if pos and previous_held_date is not None and trading_date != previous_held_date:
@@ -198,5 +206,6 @@ def replay_bidask(genes: list[float], bars: list[dict]) -> dict:
         "closed_trades": closed, "wins": wins,
         "win_rate_pct": round(100*wins/closed,2) if closed else 0.,
         "cost_usd": round(cost_total,4), "sortino_proxy": round(sortino,4),
-        "fitness": round(fitness,4), "risk_breached": ended, "death_reason": reason,
+        "fitness": round(fitness,4), "entry_samples":entry_samples,
+        "risk_breached": ended, "death_reason": reason,
     }
