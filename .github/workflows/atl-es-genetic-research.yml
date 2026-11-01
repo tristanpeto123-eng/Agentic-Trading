@@ -1,0 +1,49 @@
+name: ATL ES versus genetic-mutation research benchmark
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'backend/src/agentic_trading/es_research.py'
+      - 'backend/src/agentic_trading/es_genetic_comparison.py'
+      - 'backend/tests/test_es_genetic_comparison.py'
+      - 'scripts/run_es_ga_comparison.py'
+      - '.github/workflows/atl-es-genetic-research.yml'
+permissions:
+  contents: read
+jobs:
+  offline-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install backend and tests
+        run: python -m pip install -e './backend[dev]'
+      - name: Research isolation and deterministic comparison tests
+        run: python -m pytest backend/tests/test_es_research.py backend/tests/test_es_genetic_comparison.py -q
+      - name: Run bounded synthetic-only benchmark
+        run: python scripts/run_es_ga_comparison.py --generations 5 --pairs 8 --seeds 3 > /tmp/atl-es-ga-synthetic.json
+      - name: Audit no broker permissions and equal budgets
+        run: |
+          python - <<'PY'
+          import json
+          with open('/tmp/atl-es-ga-synthetic.json') as f: report=json.load(f)
+          assert report['market_data']=='SYNTHETIC_RANDOM_WALK_ONLY'
+          assert not report['paper_trading_enabled'] and not report['live_trading_enabled']
+          assert not report['automated_student_checkpointing'] and not report['sealed_holdout_used']
+          assert len(report['runs'])==3
+          for item in report['runs']:
+              r=item['report']
+              assert r['train_fitness_evaluations_each']==86
+              assert r['diagnostic_fitness_evaluations_total']==3
+              assert not r['independent_validation'] and not r['qualified']
+          print('Verified bounded synthetic ES/GA control comparison — no trading authority')
+          PY
+      - name: Save reproducible synthetic report
+        uses: actions/upload-artifact@v4
+        with:
+          name: atl-es-ga-synthetic-report
+          path: /tmp/atl-es-ga-synthetic.json
+          retention-days: 14
