@@ -6,6 +6,7 @@ import type { Candle } from './HistoricalResearch'
 import './StudentTrainingCockpit.css'
 import { ResearchNeuralStatus } from './ResearchNeuralStatus'
 import type { NeuralReport } from './ResearchNeuralStatus'
+import { NeuralSignalForecast } from './NeuralSignalForecast'
 
 type Rule = 'trend' | 'range' | 'breakout'
 type History = {
@@ -188,6 +189,7 @@ export function StudentTrainingCockpit({ students }: { students: Student[] }) {
     {error && <div className="message-error" role="alert"><ShieldAlert size={16}/>{error}</div>}
     {neuralError && <div className="message-error" role="alert"><ShieldAlert size={16}/>{neuralError}</div>}
     {neural && <ResearchNeuralStatus run={neural} active={neuralActive}/>}
+    {data && neural && <NeuralSignalForecast run={neural} bars={data.bars} cursor={cursor} market={data.market} studentId={studentId}/>}
     {data && current && <>
       <div className="tc-running-head"><span className="online-dot"/><strong>{stage==='running'?'Training replay active':stage==='complete'?'Research replay complete':'Research replay paused'}</strong><span>{data.market} · {data.provider}</span></div>
       <div className="tc-progress"><div className="tc-progress-top"><span>Candles processed</span><strong>{(cursor+1).toLocaleString('en-GB')} / {timeline.length.toLocaleString('en-GB')} · {pct((cursor+1)/timeline.length*100)}</strong></div><progress max={timeline.length} value={cursor+1}/></div>
