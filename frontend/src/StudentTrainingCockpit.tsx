@@ -45,8 +45,8 @@ function closeTrade(bars: Candle[], index: number, tactic: Rule, market: string)
   const side = sign(bars, index-1, tactic)
   if (!side) return null
   const qty = market === 'BTCUSD' ? .001 : .1
-  // If paired quotes exist, BUY at ASK and SELL at BID. Never charge a
-  // synthetic fixed spread on top of the actual historical spread.
+  // Historical quote sides, when present: buy at ASK and sell at BID.
+  // Never add a synthetic spread on top of a quoted spread.
   const observed = bars[index] as Candle & { bid?: {open:string;close:string}; ask?: {open:string;close:string} }
   if (observed.bid && observed.ask && market === 'XAUUSD') {
     const entry = Number(side > 0 ? observed.ask.open : observed.bid.open)
@@ -206,7 +206,7 @@ export function StudentTrainingCockpit({ students }: { students: Student[] }) {
         </button>}
     </div>
     {!students.length && <p className="tc-muted">Create your first student under Students, then return here to train.</p>}
-    {chosen && <p className="tc-muted">Automatic market: {chosen.learning_plan.mode==='autonomous'?'XAU/USD paired feed (if enabled), existing XAU/USD archive, or BTC/USD feed':chosen.learning_plan.markets.join(', ')}. Strategy targets: {allowed.length?allowed.join(', '):'No replay-compatible strategy'}.</p>}
+    {chosen && <p className="tc-muted">Automatic market: {chosen.learning_plan.mode==='autonomous'?'XAU/USD paired feed if enabled; otherwise archive or BTC/USD feed':chosen.learning_plan.markets.join(', ')}. Strategy targets: {allowed.length?allowed.join(', '):'No replay-compatible strategy'}.</p>}
     {stage==='fetching' && <div className="tc-status" role="status"><Activity size={18}/> Importing and verifying historical candles automatically…</div>}
     {error && <div className="message-error" role="alert"><ShieldAlert size={16}/>{error}</div>}
     {neuralError && <div className="message-error" role="alert"><ShieldAlert size={16}/>{neuralError}</div>}
@@ -226,20 +226,8 @@ export function StudentTrainingCockpit({ students }: { students: Student[] }) {
       <EquityChart points={visible}/>
       <div className="tc-explainer"><div><BrainCircuit size={19}/><strong>Current research rule</strong><span>{current.rule}</span></div>
         <p>{current.lastSignal}. Strategy selector reviews the previous five completed 96-candle batches; changes apply only to future observations. The historical selector alone does not update neural weights; the separate neural learner saves real checkpoint versions.</p></div>
-      <p className="tc-muted">Source: {data.provider} · {data.bars.length} M15 candles · {data.gap_count} data gaps · unverified research data. {data.price_basis==='bid_ask'?'Paired BID/ASK: hypothetical long entry ASK → exit BID; short entry BID → exit ASK; 0.10 oz. No slippage or commissions modelled.':data.market==='BTCUSD'?'Assumed costs: 0.001 BTC, 0.20% round-trip notional.':'Assumed costs: 0.10 oz, $1/oz round-trip.'} Every result is hypothetical next-bar open-to-close, not broker fills.</p>
-      {data.crosscheck && <p className="tc-muted">Independent quote comparison: {data.crosscheck.comparable ? data.crosscheck.matched+' overlapping candles · mean midpoint difference 
-    </>}
-    {!data && stage==='idle' && !error && <div className="tc-intro"><BarChart3 size={27}/><strong>Choose a student and press Train</strong><p>No datasets to upload, no manual rules or setup steps.</p></div>}
-    <div className="historical-warning"><ShieldAlert size={15}/> Historical policy replay is not a trained neural checkpoint and does not create persistent learning memories. Separately, the CPU neural learner saves real weights and losses for completed training examples, but these remain unqualified and cannot validate profitability or enable paper/live trading. Unavailable source data blocks training rather than inventing statistics.</div>
-  </section>
-}
-+data.crosscheck.mean_absolute_mid_close_usd+' · maximum 
-    </>}
-    {!data && stage==='idle' && !error && <div className="tc-intro"><BarChart3 size={27}/><strong>Choose a student and press Train</strong><p>No datasets to upload, no manual rules or setup steps.</p></div>}
-    <div className="historical-warning"><ShieldAlert size={15}/> Historical policy replay is not a trained neural checkpoint and does not create persistent learning memories. Separately, the CPU neural learner saves real weights and losses for completed training examples, but these remain unqualified and cannot validate profitability or enable paper/live trading. Unavailable source data blocks training rather than inventing statistics.</div>
-  </section>
-}
-+data.crosscheck.max_absolute_mid_close_usd : 'unavailable ('+(data.crosscheck.reason || 'no overlap')+')'}. The feeds are not mixed.</p>}
+      <p className="tc-muted">Source: {data.provider} · {data.bars.length} M15 candles · {data.gap_count} data gaps · unverified research data. {data.price_basis==='bid_ask'?'Paired BID/ASK: long entry ASK then exit BID; short entry BID then exit ASK; 0.10 oz. Excludes slippage and commissions.':data.market==='BTCUSD'?'Assumed costs: 0.001 BTC, 0.20% round-trip notional.':'Assumed costs: 0.10 oz, one dollar per oz round-trip.'} Every result is hypothetical next-bar open-to-close, not broker fills.</p>
+      {data.crosscheck && <p className="tc-muted">Independent quote comparison: {data.crosscheck.comparable ? (data.crosscheck.matched+' overlapping candles; mean midpoint difference '+data.crosscheck.mean_absolute_mid_close_usd+' USD; maximum '+data.crosscheck.max_absolute_mid_close_usd+' USD') : 'unavailable ('+(data.crosscheck.reason || 'no overlap')+')'}. These two sources are never mixed.</p>}
     </>}
     {!data && stage==='idle' && !error && <div className="tc-intro"><BarChart3 size={27}/><strong>Choose a student and press Train</strong><p>No datasets to upload, no manual rules or setup steps.</p></div>}
     <div className="historical-warning"><ShieldAlert size={15}/> Historical policy replay is not a trained neural checkpoint and does not create persistent learning memories. Separately, the CPU neural learner saves real weights and losses for completed training examples, but these remain unqualified and cannot validate profitability or enable paper/live trading. Unavailable source data blocks training rather than inventing statistics.</div>
