@@ -73,6 +73,9 @@ export function EvolutionTower(){
     finally{setBusy(false)}
   }
   const culls=events.length?events[0].removed.length:0
+  const latestEvaluation=events.find(e=>e.type==='GENERATION_EVALUATED')
+  const entryStatus=latestEvaluation?.entry_diagnostics
+  const entries=selected?.metrics?.training.entry_samples??[]
   return <section className="surface evo-shell" aria-label="Evolution Tower research arena">
     <div className="evo-heading">
       <div><p className="eyebrow">ATL · EVOLUTIONARY RESEARCH ARENA</p>
@@ -130,16 +133,35 @@ export function EvolutionTower(){
               <div><span>GENERATION</span><strong>{selected.generation}</strong></div>
               <div><span>ASSESSMENTS</span><strong>{selected.assessments??0}</strong></div>
               <div><span>PROBATION STREAK</span><strong>{selected.probation_streak??0} / 3</strong></div>
-              <div><span>NET RETURN · {real?'HISTORICAL C (DIAGNOSTIC)':'TOY C'}</span><strong>{fmt(selected.metrics?.selection.return_pct,2)}%</strong></div>
+              <div><span>NET RETURN · {real?'HISTORICAL B':'TOY B'} (SELECTION)</span><strong>{fmt(selected.metrics?.training.return_pct,2)}%</strong></div>
+              <div><span>ENTRIES · {real?'HISTORICAL B':'TOY B'} (SELECTION)</span><strong>{selected.metrics?.training.trades??'—'}</strong></div>
+              <div><span>NET RETURN · {real?'HISTORICAL C':'TOY C'} (DIAGNOSTIC)</span><strong>{fmt(selected.metrics?.selection.return_pct,2)}%</strong></div>
               <div><span>MAX DRAWDOWN · {real?'HISTORICAL C':'TOY C'}</span><strong>{fmt(selected.metrics?.selection.drawdown_pct,2)}%</strong></div>
-              <div><span>SIMULATED ENTRIES</span><strong>{selected.metrics?.selection.trades??'—'}</strong></div>
+              <div><span>ENTRIES · DIAGNOSTIC C</span><strong>{selected.metrics?.selection.trades??'—'}</strong></div>
               <div><span>ESTIMATED EXECUTION COSTS</span><strong>{'$'}{fmt(selected.metrics?.selection.cost_usd,2)}</strong></div>
             </div>
+            {entries.length>0&&<div className="evo-entries">
+              <strong>Research B · first {entries.length} hypothetical entries</strong>
+              {entries.map((entry,i)=><div key={i}>
+                <span>{entry.open_time??`Step ${entry.step??'—'}`}</span>
+                <b>{entry.side}</b><span>{fmt(entry.price,3)}</span>
+              </div>)}
+            </div>}
+            {selected.metrics?.training.trades===0&&
+              <p className="evo-flat-note">No entry decisions in research B. This agent is inactive, not profitable; probation applies.</p>}
             <p><Dna size={13}/> Genome {selected.genome_sha256.slice(0,15)}…</p>
             <p><GitBranch size={13}/> Parent {selected.parent_id??'New random initialisation'}</p>
           </div>}
         </aside>
       </div>
+      {entryStatus&&<div className="evo-entry-diagnostics">
+        <strong>Historical replay entry audit · generation {latestEvaluation?.generation}</strong>
+        <div><span>Training B: {entryStatus.training_entries_total} hypothetical entries
+          ({entryStatus.training_inactive_agents}/{entryStatus.evaluated_agents} agents inactive)</span>
+        <span>Diagnostic C: {entryStatus.diagnostic_entries_total} hypothetical entries
+          ({entryStatus.diagnostic_inactive_agents}/{entryStatus.evaluated_agents} agents inactive)</span></div>
+        <small>Training B controls ranking. Diagnostic C may show zero even when B entered. These are historical replay simulations, not live or paper broker orders.</small>
+      </div>}
       <div className="evo-floor-index">
         <div><Trophy size={16}/><strong>ROOF / PENTHOUSE</strong><span>Locked · independent slice D never used</span></div>
         <div><ShieldCheck size={16}/><strong>51–99 / ELITE</strong><span>Inaccessible until real-data evidence gates</span></div>
@@ -192,7 +214,7 @@ export function EvolutionTower(){
       </div>}
       {error&&<p className="message-error" role="alert"><ShieldAlert size={15}/>{error}</p>}
       <p className="evo-disclaimer"><ShieldAlert size={15}/><span>{real
-        ? 'Real XAU/USD BID/ASK historical quotes are used in a costed hypothetical replay. Observed spreads are real; slippage, commissions and financing remain estimates. B drives evolutionary selection, repeatedly viewed C is diagnostic only, and the final D bars remain withheld. Three assessments of the same bars are not independent validation.'
+        ? 'Real XAU/USD BID/ASK historical quotes are used in a costed hypothetical replay. Observed spreads are real; slippage, commissions and financing remain estimates. Entries shown here are replayed historical decisions, NOT broker orders. B drives evolutionary selection, repeatedly viewed C is diagnostic only, and the final D bars remain withheld. Three assessments of the same bars are not independent validation.'
         : 'This engineering prototype currently uses synthetic random-walk data. Connect an approved real BID/ASK feed above to begin historical research.'}
         {' '}The building rankings do not independently establish a market edge, trading qualification or permission. No 24/7 worker is deployed; auto evolution runs only while this page remains open.</span></p>
     </>}
