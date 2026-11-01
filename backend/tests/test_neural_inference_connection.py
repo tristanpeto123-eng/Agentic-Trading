@@ -151,9 +151,11 @@ def test_authenticated_neural_api_predict_rejects_untrained_or_other_student(tmp
     engine.dispose()
 
 
-def test_gapful_training_snapshot_rejected_for_index_phase_safety():
+def test_neural_utc_phase_survives_market_gaps_without_future_labels():
     bars=research_bars()
     bars.pop(120)
-    with pytest.raises(ResearchNeuralError,match='contiguous M15'):
-        build_training_snapshot(bars,market='XAUUSD',tactic='trend',
-                               source_sha256='a'*64,plan_version=1)
+    snapshot=build_training_snapshot(bars,market='XAUUSD',tactic='trend',
+                                     source_sha256='a'*64,plan_version=1)
+    assert snapshot['source_has_m15_gaps'] is True
+    assert snapshot['train'] and snapshot['development']
+    assert all(record['available'] > record['at'] for record in snapshot['train'])
