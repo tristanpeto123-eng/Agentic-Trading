@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from io import BytesIO
+from zipfile import BadZipFile
 import json
 import math
 from uuid import uuid4
@@ -156,7 +157,7 @@ def _restore_weights(blob: bytes, digest: str) -> dict[str, np.ndarray]:
             if set(data.files) != {"w1", "b1", "w2", "b2"}:
                 raise ResearchNeuralError("Persisted neural model keys invalid")
             result = {k: data[k].copy() for k in data.files}
-    except (ValueError, KeyError, OSError) as exc:
+    except (ValueError, KeyError, OSError, BadZipFile) as exc:
         raise ResearchNeuralError("Persisted neural checkpoint cannot be read") from exc
     expected = {"w1": (FEATURE_COUNT, HIDDEN), "b1": (HIDDEN,),
                 "w2": (HIDDEN, 2), "b2": (2,)}
