@@ -24,7 +24,9 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install backend
-        run: python -m pip install -e './backend[dev]'
+        run: |
+          python -m pip install -e './backend[dev]'
+          python -m pip install 'numpy>=1.26,<3'
       - name: Verify source, data leakage and API gates without broker access
         run: python -m pytest backend/tests/test_evolution_tower_real.py backend/tests/test_evolution_tower.py -q
       - uses: actions/setup-node@v4
