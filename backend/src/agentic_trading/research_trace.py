@@ -18,6 +18,7 @@ from agentic_trading.contracts.common import EvidenceKind
 from agentic_trading.intelligence import (
     SignalCandle, MarketWindow, research_decision, trace_digest,
 )
+from agentic_trading.research_neural import score_neural_candidate, ResearchNeuralError
 
 MAX_WINDOW = 192
 MAX_EVALUATIONS = 24
@@ -43,11 +44,11 @@ class TraceBatchInput(BaseModel):
         return self
 
 
-def inspect_trace_batch(payload: TraceBatchInput, *, permitted_skills: set[str]) -> dict:
-    """No database writes; no authenticated model inference; no paper/live routes.
+def inspect_trace_batch(payload: TraceBatchInput, *, permitted_skills: set[str], neural_context: dict | None = None) -> dict:
+    """Read-only actual S4 research plus optional genuine neural diagnostic.
 
-    All output is research-only. A candidate without trained Scout B + Guardian
-    cannot be called a trade decision. Only *actual* S4 engine output is shown.
+    An unqualified neural score never constitutes a trained empirical Scout B
+    assessment or a Guardian-authorised order. The original decision remains NO_TRADE.
     """
     observations = []
     for index in range(payload.first_index, payload.last_index + 1):
@@ -61,6 +62,7 @@ def inspect_trace_batch(payload: TraceBatchInput, *, permitted_skills: set[str])
                 "reason": "NON_CONTIGUOUS_M15_HISTORY",
                 "regime": None, "candidate": None,
                 "scout_b": "NOT_EVALUATED", "guardian": "NOT_EVALUATED",
+                "neural": None, "neural_trace_sha256": None,
                 "trace_sha256": None,
             })
             continue
@@ -85,9 +87,21 @@ def inspect_trace_batch(payload: TraceBatchInput, *, permitted_skills: set[str])
         }.get(proposed.tactic_id) if proposed else None)
         in_plan = not proposed or tactic_name in permitted_skills
         reason = "OUTSIDE_STUDENT_LEARNING_PLAN" if not in_plan else trace.reason
+        neural = None
+        if neural_context is not None and proposed is not None and in_plan and tactic_name:
+            try:
+                neural = score_neural_candidate(
+                    neural_context, list(selected), market="XAUUSD", tactic=tactic_name)
+            except ResearchNeuralError as exc:
+                neural = {"status": "INPUT_GUARD_BLOCKED", "recommendation": "ABSTAIN",
+                          "reason": str(exc), "guardian_authorised": False}
+        neural_fingerprint = (sha256(json.dumps({"s4_trace": trace.trace_sha256,
+            "neural": neural}, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+            if neural is not None else None)
         observations.append({
             "index": index, "observed_at": at.isoformat().replace("+00:00", "Z"),
             "state": "UNQUALIFIED_RESEARCH_TRACE",
+            "neural": neural, "neural_trace_sha256": neural_fingerprint,
             "decision": "NO_TRADE", "reason": reason,
             "regime": {
                 "market": trace.regime.market.value,
@@ -121,11 +135,11 @@ def inspect_trace_batch(payload: TraceBatchInput, *, permitted_skills: set[str])
         "price_basis": payload.price_basis,
         "source_verified": False,
         "independently_trained_scout_b": False,
-        "neural_checkpoint_inference_enabled": False,
+        "neural_checkpoint_inference_enabled": neural_context is not None,
         "research_only": True,
         "simulated_orders_created": 0,
         "paper_trading_enabled": False,
         "live_trading_enabled": False,
         "observations": observations,
-        "note": "This is actual deterministic Scout A / Strategist research logic. Without an independently trained Scout B there can be no Guardian-approved intent; no orders are created.",
+        "note": "Actual deterministic Scout A and Strategist with optional genuine saved neural candidate prediction. Neural outputs are uncalibrated, not an independently matured Scout B model. Guardian does not approve intents or orders.",
     }
