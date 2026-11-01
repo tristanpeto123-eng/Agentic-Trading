@@ -30,6 +30,7 @@ export function EvolutionTower(){
   const agents=state?.agents??[]
   const real=state?.mode==='REAL_XAUUSD_BID_ASK_RESEARCH'
   const events=state?.last_events??[]
+  const probation=agents.filter(a=>a.status==='probation').length
   const sorted=useMemo(()=>[...agents].sort((a,b)=>b.floor-a.floor||
     ((real?b.metrics?.training.fitness:b.metrics?.selection.fitness)??-999)-
     ((real?a.metrics?.training.fitness:a.metrics?.selection.fitness)??-999)),[agents,real])
@@ -55,7 +56,7 @@ export function EvolutionTower(){
   }
   useEffect(()=>{
     if(!auto||busy||!state?.initialized||state.generation===undefined||state.generation>=100)return
-    const timer=window.setTimeout(()=>void action('advance'),2800)
+    const timer=window.setTimeout(()=>void action('advance'),10000)
     return()=>window.clearTimeout(timer)
   // Auto-evolve intentionally only runs while this browser tab is mounted.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,12 +102,13 @@ export function EvolutionTower(){
               <span><i className="evo-dot nursery"/> Nursery</span>
               <span><i className="evo-dot survivor"/> Survivors</span>
               <span><i className="evo-dot leader"/> Research leader</span>
+              <span><i className="evo-dot probation"/> Probation</span>
             </div>
             <div className="evo-zoom-help">Drag to orbit · pinch to zoom · tap a robot</div>
           </>:<div className="evo-empty">
             <Layers3 size={42}/>
             <strong>YOUR EVOLUTION TOWER</strong>
-            <p>Generate 16 simulated neural agents and see them occupy the building. Each generation evaluates costs, archives failures and breeds successors.</p>
+            <p>Generate 16 simulated neural agents. Survival is earned through performance, weak agents receive probation, and only actual retirements create new nursery spaces.</p>
           </div>}
         </div>
         <aside className="evo-sidebar">
@@ -116,8 +118,8 @@ export function EvolutionTower(){
             {sorted.length?sorted.map((a,index)=><button key={a.id}
               className={'evo-agent-row'+(selected?.id===a.id?' active':'')}
               onClick={()=>setSelectedId(a.id)}>
-                <span className={'evo-mini-bot '+(a.status==='research_leader'?'winner':'')}><Bot size={18}/></span>
-                <span className="evo-agent-copy"><strong>{a.id}</strong><small>Gen {a.generation} · {level(a.floor)}</small></span>
+                <span className={'evo-mini-bot '+(a.status==='research_leader'?'winner':a.status==='probation'?'probation':'')}><Bot size={18}/></span>
+                <span className="evo-agent-copy"><strong>{a.id}</strong><small>Gen {a.generation} · {a.status==='probation'?'PROBATION':level(a.floor)}</small></span>
                 <span className="evo-agent-score">F{a.floor.toString().padStart(2,'0')}<small>{index===0?'TOP':fmt(real?a.metrics?.training.fitness:a.metrics?.selection.fitness,2)}</small></span>
               </button>):<div className="evo-no-agents">No research population created yet.</div>}
           </div>
@@ -126,6 +128,8 @@ export function EvolutionTower(){
             <div className="evo-inspect-grid">
               <div><span>FLOOR</span><strong>{selected.floor}</strong></div>
               <div><span>GENERATION</span><strong>{selected.generation}</strong></div>
+              <div><span>ASSESSMENTS</span><strong>{selected.assessments??0}</strong></div>
+              <div><span>PROBATION STREAK</span><strong>{selected.probation_streak??0} / 3</strong></div>
               <div><span>NET RETURN · {real?'HISTORICAL C (DIAGNOSTIC)':'TOY C'}</span><strong>{fmt(selected.metrics?.selection.return_pct,2)}%</strong></div>
               <div><span>MAX DRAWDOWN · {real?'HISTORICAL C':'TOY C'}</span><strong>{fmt(selected.metrics?.selection.drawdown_pct,2)}%</strong></div>
               <div><span>SIMULATED ENTRIES</span><strong>{selected.metrics?.selection.trades??'—'}</strong></div>
@@ -139,7 +143,7 @@ export function EvolutionTower(){
       <div className="evo-floor-index">
         <div><Trophy size={16}/><strong>ROOF / PENTHOUSE</strong><span>Locked · independent slice D never used</span></div>
         <div><ShieldCheck size={16}/><strong>51–99 / ELITE</strong><span>Inaccessible until real-data evidence gates</span></div>
-        <div><Bot size={16}/><strong>21–49 / SURVIVORS</strong><span>Relative research fitness; not validated</span></div>
+        <div><Bot size={16}/><strong>21–49 / SURVIVORS</strong><span>Positive research results; rank alone never triggers elimination</span></div>
         <div><Dna size={16}/><strong>G / NURSERY</strong><span>Neural children start here</span></div>
       </div>
       <div className="evo-toolbar">
@@ -170,9 +174,16 @@ export function EvolutionTower(){
             <Skull size={16}/>{showArchive?'Hide':'View'} failure archive
           </button>
         </>}
-        <span>Each generation is saved to PostgreSQL</span>
+        <span>Each generation is saved to PostgreSQL · auto-evolve every 10 seconds</span>
       </div>
-      {culls>0&&<div className="evo-event"><Skull size={17}/> Generation {state?.generation}: {culls} eliminated · descendants spawned in the nursery. Failure reasons are preserved.</div>}
+      {state?.initialized&&events.length>0&&events[0].type==='GENERATION_EVALUATED'&&
+        <div className={'evo-event'+(culls===0?' safe':'')}>
+          {culls>0?<Skull size={17}/>:<ShieldCheck size={17}/>}
+          Generation {state?.generation}: {culls>0
+            ? `${culls} retired for risk or persistent underperformance · ${culls} replacements spawned.`
+            : 'No bots retired; the full population survived this assessment.'}
+          {' '}{probation} on probation. No compulsory bottom-half purge.
+        </div>}
       {showArchive&&<div className="evo-archive" aria-label="Evolution failure archive">
         <h3>Archived research failures</h3>
         {events.length?events.flatMap(e=>e.removed.map(a=>({gen:e.generation,...a}))).map((a,i)=>
@@ -181,7 +192,7 @@ export function EvolutionTower(){
       </div>}
       {error&&<p className="message-error" role="alert"><ShieldAlert size={15}/>{error}</p>}
       <p className="evo-disclaimer"><ShieldAlert size={15}/><span>{real
-        ? 'Real XAU/USD BID/ASK historical quotes are used in a costed hypothetical replay. Observed spreads are real; slippage, commissions and financing remain estimates. B drives evolutionary selection, repeatedly viewed C is diagnostic only, and the final D bars remain withheld.'
+        ? 'Real XAU/USD BID/ASK historical quotes are used in a costed hypothetical replay. Observed spreads are real; slippage, commissions and financing remain estimates. B drives evolutionary selection, repeatedly viewed C is diagnostic only, and the final D bars remain withheld. Three assessments of the same bars are not independent validation.'
         : 'This engineering prototype currently uses synthetic random-walk data. Connect an approved real BID/ASK feed above to begin historical research.'}
         {' '}The building rankings do not independently establish a market edge, trading qualification or permission. No 24/7 worker is deployed; auto evolution runs only while this page remains open.</span></p>
     </>}
