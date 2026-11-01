@@ -44,7 +44,7 @@ from agentic_trading.m15_trade_scenario import study_costed_outcomes
 from agentic_trading.research_trace import TraceBatchInput, inspect_trace_batch
 from agentic_trading.research_neural import (create_run as start_neural_run, train_one_epoch,
     get_run_report, ResearchNeuralError)
-from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, new_session_factory
+from agentic_trading.storage import AuditEvent, Base, CEO, LearningPlan, Student, HistoricalDataset, ResearchNeuralRun, new_session_factory
 
 
 class LoginLimiter:
@@ -271,10 +271,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             saved = get_run_report(session, student_id)
         except ResearchNeuralError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
+        plan = max(student.plans, key=lambda row: row.version)
         if saved is not None and saved["state"] != "complete":
+            frozen_run = session.get(ResearchNeuralRun, saved["run_id"])
+            if frozen_run.plan_version != plan.version:
+                raise HTTPException(status_code=409, detail="Saved neural run uses an older student learning plan; CEO review required")
             response.headers["Cache-Control"] = "no-store"
             return saved
-        plan = max(student.plans, key=lambda row: row.version)
         permitted = ("trend", "range", "breakout") if plan.mode == "autonomous" else (
             tuple(skill for skill in ("trend", "range", "breakout") if skill in plan.skills))
         if not permitted:
@@ -299,7 +302,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                                 response: Response, _: CEO = Depends(require_csrf),
                                 session: Session = Depends(db)):
         """Idempotence guarded by expected_epoch; no file writes or broker orders."""
-        get_student_or_404(student_id, session)
+        student = get_student_or_404(student_id, session)
+        record = session.get(ResearchNeuralRun, run_id)
+        if record is not None and record.student_id == student_id:
+            if record.plan_version != max(p.version for p in student.plans):
+                raise HTTPException(status_code=409, detail="Student learning plan changed; frozen neural run cannot advance")
         if set(payload) != {"expected_epoch"} or type(payload.get("expected_epoch")) is not int:
             raise HTTPException(status_code=422, detail="Expected numeric epoch required")
         if not 0 <= payload["expected_epoch"] < 80:
