@@ -22,8 +22,11 @@ test('iPhone research tower creates population, advances generations and display
   await expect(tower.getByLabel('Evolution failure archive')).toBeVisible()
   await expect(tower.getByText(/penthouse/i).first()).toBeVisible()
   await page.reload()
+  // The existing app intentionally opens Home after a full reload.
+  // Navigate back to Trading to verify that the server persisted the cohort.
+  await page.locator('nav.bottom-nav').getByRole('button',{name:'Trading'}).click()
   await expect(tower.getByText('16 robots')).toBeVisible()
-  await expect(tower.getByText('ATL-G1-001',{exact:true})).toBeVisible()
+  await expect(tower.locator('.evo-agent-list').getByText('ATL-G1-001',{exact:true})).toBeVisible()
   await expect(tower.getByText('Auto-evolve in this tab')).toBeVisible()
   await expect(tower.getByText(/No 24\/7 worker is deployed/)).toBeVisible()
   // Existing current student training remains accessible lower down.
