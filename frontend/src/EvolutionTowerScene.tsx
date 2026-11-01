@@ -6,6 +6,9 @@ export type TowerMetric = {
   equity:number;return_pct:number;drawdown_pct:number;trades:number;closed_trades:number
   wins:number;win_rate_pct:number;fitness:number;cost_usd:number
   risk_breached:boolean;death_reason:string|null
+  entry_samples?:Array<{
+    side:'BUY'|'SELL';price:number;open_time?:string;step?:number;price_basis:string
+  }>
 }
 export type TowerAgent = {
   id:string; generation:number; parent_id:string|null; genome_sha256:string
@@ -17,6 +20,11 @@ export type TowerAgent = {
 export type TowerEvent = {
   type:string;generation:number;removed:{id:string;from_floor:number;reason:string}[]
   kept_ids:string[];born:{id:string;parent_id:string|null}[]
+  entry_diagnostics?:{
+    evaluated_agents:number;training_entries_total:number;diagnostic_entries_total:number
+    training_inactive_agents:number;diagnostic_inactive_agents:number
+    source_kind:string;order_execution:boolean
+  }
 }
 const HEIGHT = 1.8
 const FLOOR_COUNT = 100
