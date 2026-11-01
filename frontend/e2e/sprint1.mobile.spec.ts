@@ -58,6 +58,7 @@ test('mobile CEO login, student lifecycle, and disabled trading', async ({ page 
 
   await nav.getByRole('button', { name: 'Trading' }).click()
   await expect(page.getByRole('heading', { name: 'Trading', exact: true })).toBeVisible()
+  await page.getByText('Advanced tools · historical replay, data & paper account').click()
   await page.getByText('Advanced tools · saved data, M1 quotes & engine demonstrations').click()
   await expect(page.getByRole('heading', { name: 'Candle Replay' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Trade and P&L replay' })).toBeVisible()
