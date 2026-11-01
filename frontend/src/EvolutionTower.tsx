@@ -8,7 +8,11 @@ import './EvolutionTower.css'
 type TowerState = {
   initialized:boolean;research_only:true;generation?:number;total_born?:number;total_culled?:number
   agents?:TowerAgent[];last_events?:TowerEvent[];state_sha256?:string
-  penthouse_locked:true;population_size?:number;mode?:string
+  penthouse_locked:true;population_size?:number;mode?:string;performance_kind?:string
+  real_generation?:number;research_data?:{
+    provider:string;source_sha256:string;observations_received:number
+    d_bars_withheld:number;gap_count:number;first_open_time:string;last_research_open_time:string
+  }
 }
 const fmt=(v:number|undefined,digits=1)=>v===undefined?'—':v.toFixed(digits)
 const level=(floor:number)=>floor>=50?'ELITE':floor>=21?'SURVIVOR':floor>1?'APPRENTICE':'NURSERY'
@@ -20,12 +24,15 @@ export function EvolutionTower(){
   const [busy,setBusy]=useState(false)
   const [selectedId,setSelectedId]=useState<string|null>(null)
   const [auto,setAuto]=useState(false)
+  const [source,setSource]=useState<'oanda'|'dukascopy'>('oanda')
   const [showArchive,setShowArchive]=useState(false)
   const [expanded,setExpanded]=useState(true)
   const agents=state?.agents??[]
+  const real=state?.mode==='REAL_XAUUSD_BID_ASK_RESEARCH'
   const events=state?.last_events??[]
   const sorted=useMemo(()=>[...agents].sort((a,b)=>b.floor-a.floor||
-    (b.metrics?.selection.fitness??-999)-(a.metrics?.selection.fitness??-999)),[agents])
+    ((real?b.metrics?.training.fitness:b.metrics?.selection.fitness)??-999)-
+    ((real?a.metrics?.training.fitness:a.metrics?.selection.fitness)??-999)),[agents,real])
   const selected=agents.find(a=>a.id===selectedId)??sorted[0]??null
   useEffect(()=>{
     let alive=true
@@ -53,6 +60,17 @@ export function EvolutionTower(){
   // Auto-evolve intentionally only runs while this browser tab is mounted.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[auto,busy,state?.generation,state?.initialized])
+  const activateReal=async()=>{
+    if(busy||!state?.initialized||real)return
+    setAuto(false);setBusy(true);setError('')
+    try{
+      const result=await api<TowerState>('/v1/evolution-tower/use-real-history','POST',{
+        expected_generation:state.generation??0,source
+      })
+      setState(result);setSelectedId(null)
+    }catch(e){setError(e instanceof Error?e.message:'Historical XAU/USD import failed')}
+    finally{setBusy(false)}
+  }
   const culls=events.length?events[0].removed.length:0
   return <section className="surface evo-shell" aria-label="Evolution Tower research arena">
     <div className="evo-heading">
@@ -61,7 +79,7 @@ export function EvolutionTower(){
         <p>100-floor 3D command centre · a population of real saved neural chromosomes</p>
       </div>
       <div className="evo-head-right">
-        <span className="evo-experiment"><span/> SYNTHETIC RESEARCH</span>
+        <span className="evo-experiment"><span/> {real?'REAL PRICE RESEARCH':'SYNTHETIC RESEARCH'}</span>
         <button className="evo-collapse" aria-label={expanded?'Collapse tower':'Expand tower'}
           onClick={()=>setExpanded(!expanded)}>{expanded?<ChevronUp size={19}/>:<ChevronDown size={19}/>}</button>
       </div>
@@ -100,7 +118,7 @@ export function EvolutionTower(){
               onClick={()=>setSelectedId(a.id)}>
                 <span className={'evo-mini-bot '+(a.status==='research_leader'?'winner':'')}><Bot size={18}/></span>
                 <span className="evo-agent-copy"><strong>{a.id}</strong><small>Gen {a.generation} · {level(a.floor)}</small></span>
-                <span className="evo-agent-score">F{a.floor.toString().padStart(2,'0')}<small>{index===0?'TOP':fmt(a.metrics?.selection.fitness,2)}</small></span>
+                <span className="evo-agent-score">F{a.floor.toString().padStart(2,'0')}<small>{index===0?'TOP':fmt(real?a.metrics?.training.fitness:a.metrics?.selection.fitness,2)}</small></span>
               </button>):<div className="evo-no-agents">No research population created yet.</div>}
           </div>
           {selected&&<div className="evo-inspect">
@@ -108,10 +126,10 @@ export function EvolutionTower(){
             <div className="evo-inspect-grid">
               <div><span>FLOOR</span><strong>{selected.floor}</strong></div>
               <div><span>GENERATION</span><strong>{selected.generation}</strong></div>
-              <div><span>NET RETURN · TOY C</span><strong>{fmt(selected.metrics?.selection.return_pct,2)}%</strong></div>
-              <div><span>MAX DRAWDOWN · TOY C</span><strong>{fmt(selected.metrics?.selection.drawdown_pct,2)}%</strong></div>
+              <div><span>NET RETURN · {real?'HISTORICAL C (DIAGNOSTIC)':'TOY C'}</span><strong>{fmt(selected.metrics?.selection.return_pct,2)}%</strong></div>
+              <div><span>MAX DRAWDOWN · {real?'HISTORICAL C':'TOY C'}</span><strong>{fmt(selected.metrics?.selection.drawdown_pct,2)}%</strong></div>
               <div><span>SIMULATED ENTRIES</span><strong>{selected.metrics?.selection.trades??'—'}</strong></div>
-              <div><span>EXECUTION COSTS</span><strong>{'$'}{fmt(selected.metrics?.selection.cost_usd,2)}</strong></div>
+              <div><span>ESTIMATED EXECUTION COSTS</span><strong>{'$'}{fmt(selected.metrics?.selection.cost_usd,2)}</strong></div>
             </div>
             <p><Dna size={13}/> Genome {selected.genome_sha256.slice(0,15)}…</p>
             <p><GitBranch size={13}/> Parent {selected.parent_id??'New random initialisation'}</p>
@@ -121,10 +139,24 @@ export function EvolutionTower(){
       <div className="evo-floor-index">
         <div><Trophy size={16}/><strong>ROOF / PENTHOUSE</strong><span>Locked · independent slice D never used</span></div>
         <div><ShieldCheck size={16}/><strong>51–99 / ELITE</strong><span>Inaccessible until real-data evidence gates</span></div>
-        <div><Bot size={16}/><strong>21–49 / SURVIVORS</strong><span>Relative positive toy-selection score</span></div>
+        <div><Bot size={16}/><strong>21–49 / SURVIVORS</strong><span>Relative research fitness; not validated</span></div>
         <div><Dna size={16}/><strong>G / NURSERY</strong><span>Neural children start here</span></div>
       </div>
       <div className="evo-toolbar">
+        {state?.initialized&&!real&&<div className="evo-source-switch">
+          <label htmlFor="evo-real-provider">Historical XAU/USD source</label>
+          <select id="evo-real-provider" value={source} onChange={e=>setSource(e.target.value as 'oanda'|'dukascopy')} disabled={busy||auto}>
+            <option value="oanda">OANDA practice bid/ask</option>
+            <option value="dukascopy">Dukascopy bid/ask</option>
+          </select>
+          <button className="btn btn-secondary" onClick={()=>void activateReal()} disabled={busy||auto}>
+            {busy?'Importing real quotes…':'Switch tower to real data'}
+          </button>
+        </div>}
+        {real&&state?.research_data&&<p className="evo-real-provenance">
+          Observed XAU/USD M15 BID/ASK · {state.research_data.provider} · {state.research_data.observations_received} bars
+          · {state.research_data.d_bars_withheld} final bars withheld · B ranks · C diagnostic only · Research generation {state.real_generation??0}
+        </p>}
         {!state?.initialized?<button className="btn btn-primary" onClick={()=>void action('start')} disabled={busy}>
           <Dna size={17}/>{busy?'Creating research population…':'Generate 16 agents'}</button>:<>
           <button className="btn btn-primary" onClick={()=>void action('advance')} disabled={busy||auto||(state.generation??0)>=100}>
@@ -148,7 +180,10 @@ export function EvolutionTower(){
           :<p>No eliminated agents yet.</p>}
       </div>}
       {error&&<p className="message-error" role="alert"><ShieldAlert size={15}/>{error}</p>}
-      <p className="evo-disclaimer"><ShieldAlert size={15}/> This engineering prototype uses deterministic random-walk data, assumed friction and bounded browser-driven generations. The building and rankings reflect saved simulation events, but <strong>none establishes a market edge, trading qualification or permission.</strong> No 24/7 worker is deployed; auto evolution runs only while this page remains open.</p>
+      <p className="evo-disclaimer"><ShieldAlert size={15}/><span>{real
+        ? 'Real XAU/USD BID/ASK historical quotes are used in a costed hypothetical replay. Observed spreads are real; slippage, commissions and financing remain estimates. B drives evolutionary selection, repeatedly viewed C is diagnostic only, and the final D bars remain withheld.'
+        : 'This engineering prototype currently uses synthetic random-walk data. Connect an approved real BID/ASK feed above to begin historical research.'}
+        {' '}The building rankings do not independently establish a market edge, trading qualification or permission. No 24/7 worker is deployed; auto evolution runs only while this page remains open.</span></p>
     </>}
   </section>
 }
