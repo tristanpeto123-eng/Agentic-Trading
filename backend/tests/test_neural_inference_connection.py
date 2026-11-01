@@ -159,3 +159,22 @@ def test_neural_utc_phase_survives_market_gaps_without_future_labels():
     assert snapshot['source_has_m15_gaps'] is True
     assert snapshot['train'] and snapshot['development']
     assert all(record['available'] > record['at'] for record in snapshot['train'])
+
+
+
+def test_flat_completed_history_returns_explicit_no_strategy_signal_not_409(tmp_path):
+    """A flat interval should ABSTAIN normally; saved weights remain valid."""
+    engine, factory = new_session_factory("sqlite:///" + str(tmp_path / "flat_model.sqlite"))
+    Base.metadata.create_all(engine)
+    sid = student(factory)
+    with factory() as session:
+        context = saved_model(session, sid, research_bars())
+        sample = [dict(x) for x in research_bars()[1195:1200]]
+        for candle in sample:
+            candle.update(open="2200", high="2201", low="2199", close="2200")
+        result = score_neural_candidate(context, sample, market="XAUUSD", tactic="trend")
+        assert result["status"] == "NO_STRATEGY_SIGNAL"
+        assert result["recommendation"] == "ABSTAIN"
+        assert result["guardian_authorised"] is False
+        assert result["checkpoint_sha256"] == context["weights_sha256"]
+    engine.dispose()

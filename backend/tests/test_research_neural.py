@@ -8,9 +8,9 @@ from sqlalchemy import select
 
 from agentic_trading.research_neural import (
     ResearchNeuralError, build_training_snapshot, create_run,
-    get_run_report, train_one_epoch,
+    get_run_report, train_one_epoch, _sha,
 )
-from agentic_trading.storage import Base, LearningPlan, ResearchNeuralEpoch, Student, new_session_factory
+from agentic_trading.storage import Base, LearningPlan, ResearchNeuralEpoch, ResearchNeuralRun, Student, new_session_factory
 from test_historical_render import _setup, _source
 
 
@@ -171,6 +171,27 @@ def test_authenticated_neural_flow_no_broker_or_policy_write(tmp_path, monkeypat
         from agentic_trading.storage import TradeExperience, ResearchPolicyCandidate
         assert session.scalars(select(TradeExperience)).all() == []
         assert session.scalars(select(ResearchPolicyCandidate)).all() == []
+    # Regression: the old v1 checkpoint must not trap Train in an endless
+    # run of 200 OK training epochs and 409 Conflict inference requests.
+    with factory() as session:
+        record = session.get(ResearchNeuralRun, first["run_id"])
+        original = dict(record.frozen_examples)
+        original["schema"] = "research_m15_outcome_mlp8x16x2.v1"
+        original.pop("input_ohlc_schema", None)
+        original.pop("source_start_utc", None)
+        record.frozen_examples = original
+        record.snapshot_sha256 = _sha(original)
+        session.commit()
+    assert client.get(base+"/latest").json()["run"]["model_schema"].endswith(".v1")
+    migrated = client.post(base+"/start", headers=headers, json={})
+    assert migrated.status_code == 200, migrated.text
+    assert migrated.json()["run_id"] != first["run_id"]
+    assert migrated.json()["model_schema"].endswith(".v2")
+    with factory() as session:
+        prior = session.get(ResearchNeuralRun, first["run_id"])
+        assert prior.frozen_examples["schema"].endswith(".v1")
+        assert prior.snapshot_sha256 == _sha(prior.frozen_examples)
+    assert client.get(base+"/latest").json()["run"]["run_id"] == migrated.json()["run_id"]
     client.cookies.clear()
     assert client.get(base+"/latest").status_code == 401
     engine.dispose()
