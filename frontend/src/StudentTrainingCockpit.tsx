@@ -4,6 +4,8 @@ import { api } from './api'
 import type { Student } from './api'
 import type { Candle } from './HistoricalResearch'
 import './StudentTrainingCockpit.css'
+import { ResearchNeuralStatus } from './ResearchNeuralStatus'
+import type { NeuralReport } from './ResearchNeuralStatus'
 
 type Rule = 'trend' | 'range' | 'breakout'
 type History = {
@@ -105,7 +107,29 @@ export function StudentTrainingCockpit({ students }: { students: Student[] }) {
   const [cursor, setCursor] = useState(0)
   const [stage, setStage] = useState<'idle'|'fetching'|'running'|'stopped'|'complete'>('idle')
   const [error, setError] = useState('')
+  const [neural, setNeural] = useState<NeuralReport | null>(null)
+  const [neuralActive, setNeuralActive] = useState(false)
+  const [neuralError, setNeuralError] = useState('')
   const chosen = students.find(s=>s.id === studentId)
+  useEffect(()=>{
+    let valid=true
+    setNeural(null);setNeuralError('');setNeuralActive(false)
+    if(studentId) void api<{run:NeuralReport|null}>('/v1/students/'+encodeURIComponent(studentId)+'/neural/latest')
+      .then(result=>{if(valid)setNeural(result.run)})
+      .catch(err=>{if(valid)setNeuralError(err instanceof Error?err.message:'Saved checkpoint unavailable')})
+    return ()=>{valid=false}
+  },[studentId])
+  useEffect(()=>{
+    if(!neuralActive||!neural||neural.epoch>=neural.epochs_planned)return
+    let valid=true
+    const timer=window.setTimeout(()=>{
+      void api<NeuralReport>('/v1/students/'+encodeURIComponent(studentId)+'/neural/'+encodeURIComponent(neural.run_id)+'/epoch',
+          'POST',{expected_epoch:neural.epoch})
+        .then(result=>{if(valid){setNeural(result);if(result.state==='complete')setNeuralActive(false)}})
+        .catch(err=>{if(valid){setNeuralActive(false);setNeuralError(err instanceof Error?err.message:'Neural epoch failed')}})
+    },420)
+    return ()=>{valid=false;window.clearTimeout(timer)}
+  },[neuralActive,neural,studentId])
   const allowed = RULES.filter(t=>!chosen || chosen.learning_plan.mode === 'autonomous' || chosen.learning_plan.skills.includes(t))
   const timeline = useMemo(()=>data ? buildTrainingTimeline(data.bars, data.market, allowed) : [],[data,chosen?.id,chosen?.learning_plan.version])
   const current = timeline[Math.min(cursor, timeline.length-1)]
@@ -120,8 +144,12 @@ export function StudentTrainingCockpit({ students }: { students: Student[] }) {
   },[stage,cursor,timeline.length])
   const train = async () => {
     if(!studentId) return
-    setStage('fetching');setData(null);setCursor(0);setError('')
+    setStage('fetching');setData(null);setCursor(0);setError('');setNeuralError('');setNeuralActive(false)
     try{
+      const previous = await api<{run:NeuralReport|null}>('/v1/students/'+encodeURIComponent(studentId)+'/neural/latest')
+      if(previous.run && previous.run.epoch < previous.run.epochs_planned){
+        setNeural(previous.run);setStage('running');setNeuralActive(true);return
+      }
       const hist = await api<History>('/v1/students/'+encodeURIComponent(studentId)+'/train-data')
       if(!hist.bars?.length || hist.bars.length<96 || hist.student_id!==studentId || hist.training_kind!=='historical_policy_replay') throw new Error('Insufficient historical research observations')
       // Do not silently train on a market outside the CEO student's plan.
@@ -129,6 +157,10 @@ export function StudentTrainingCockpit({ students }: { students: Student[] }) {
       if(scope?.mode==='directed' && !scope.markets.includes(hist.market)) throw new Error('Fetched market does not match student learning scope')
       if(hist.neural_training_performed!==false || hist.paper_trading_enabled!==false || hist.live_trading_enabled!==false) throw new Error('Invalid non-research training source')
       setData(hist);setStage('running')
+      try{
+        const started=await api<NeuralReport>('/v1/students/'+encodeURIComponent(studentId)+'/neural/start','POST',{})
+        setNeural(started);setNeuralActive(started.epoch<started.epochs_planned)
+      }catch(e){setNeuralError('Neural weights not trained: '+(e instanceof Error?e.message:'No eligible data'))}
     } catch(e){setStage('idle');setError(e instanceof Error?e.message:'Automatic research import failed')}
   }
   return <section className="surface panel tc-panel" aria-label="Student training cockpit">
@@ -138,22 +170,24 @@ export function StudentTrainingCockpit({ students }: { students: Student[] }) {
     <div className="tc-action">
       <label htmlFor="tc-student">Student
         <select id="tc-student" aria-label="Choose student to train" value={studentId}
-          disabled={stage==='fetching'||stage==='running'}
-          onChange={e=>{setStudentId(e.target.value);setData(null);setStage('idle');setError('')}} >
+          disabled={stage==='fetching'||stage==='running'||neuralActive}
+          onChange={e=>{setStudentId(e.target.value);setData(null);setNeural(null);setNeuralActive(false);setStage('idle');setError('')}} >
           <option value="">Choose a student…</option>
           {students.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
       </label>
-      {stage==='running' ? <button className="btn btn-secondary tc-button" onClick={()=>setStage('stopped')}><Square size={17}/> Stop</button> :
+      {stage==='running'||neuralActive ? <button className="btn btn-secondary tc-button" onClick={()=>{setStage('stopped');setNeuralActive(false)}}><Square size={17}/> Stop</button> :
         <button className="btn btn-primary tc-button" disabled={!studentId||stage==='fetching'||!allowed.length}
-          onClick={()=>{if(stage==='stopped'&&data){setStage('running')}else void train()}}>
-          <Play size={17}/> {stage==='fetching'?'Importing history…':stage==='stopped'?'Resume':'Train'}
+          onClick={()=>{if(stage==='stopped'&&(data||(neural&&neural.can_resume))){setStage('running');setNeuralActive(Boolean(neural?.can_resume))}else void train()}}>
+          <Play size={17}/> {stage==='fetching'?'Preparing training…':stage==='stopped'?'Resume':'Train'}
         </button>}
     </div>
     {!students.length && <p className="tc-muted">Create your first student under Students, then return here to train.</p>}
     {chosen && <p className="tc-muted">Automatic market: {chosen.learning_plan.mode==='autonomous'?'XAUUSD archive if available; otherwise BTC/USD feed':chosen.learning_plan.markets.join(', ')}. Strategy targets: {allowed.length?allowed.join(', '):'No replay-compatible strategy'}.</p>}
     {stage==='fetching' && <div className="tc-status" role="status"><Activity size={18}/> Importing and verifying historical candles automatically…</div>}
     {error && <div className="message-error" role="alert"><ShieldAlert size={16}/>{error}</div>}
+    {neuralError && <div className="message-error" role="alert"><ShieldAlert size={16}/>{neuralError}</div>}
+    {neural && <ResearchNeuralStatus run={neural} active={neuralActive}/>}
     {data && current && <>
       <div className="tc-running-head"><span className="online-dot"/><strong>{stage==='running'?'Training replay active':stage==='complete'?'Research replay complete':'Research replay paused'}</strong><span>{data.market} · {data.provider}</span></div>
       <div className="tc-progress"><div className="tc-progress-top"><span>Candles processed</span><strong>{(cursor+1).toLocaleString('en-GB')} / {timeline.length.toLocaleString('en-GB')} · {pct((cursor+1)/timeline.length*100)}</strong></div><progress max={timeline.length} value={cursor+1}/></div>
@@ -167,10 +201,10 @@ export function StudentTrainingCockpit({ students }: { students: Student[] }) {
       </div>
       <EquityChart points={visible}/>
       <div className="tc-explainer"><div><BrainCircuit size={19}/><strong>Current research rule</strong><span>{current.rule}</span></div>
-        <p>{current.lastSignal}. Strategy selector reviews the previous five completed 96-candle batches; changes apply only to future observations. No neural weights were trained or saved.</p></div>
+        <p>{current.lastSignal}. Strategy selector reviews the previous five completed 96-candle batches; changes apply only to future observations. The historical selector alone does not update neural weights; the separate neural learner saves real checkpoint versions.</p></div>
       <p className="tc-muted">Source: {data.provider} · {data.bars.length} M15 candles · {data.gap_count} data gaps · unverified research data. Assumed costs: {data.market==='BTCUSD'?'0.001 BTC, 0.20% round-trip notional':'0.10 oz, $1/oz round-trip'}. Every result is hypothetical next-bar open-to-close, not broker fills.</p>
     </>}
-    {!data && stage!=='fetching' && !error && <div className="tc-intro"><BarChart3 size={27}/><strong>Choose a student and press Train</strong><p>No datasets to upload, no manual rules or setup steps.</p></div>}
-    <div className="historical-warning"><ShieldAlert size={15}/> This runs actual historical research calculations, not a trained neural checkpoint. It does not create persistent learning memories, validate profitability or enable paper/live trading. Unavailable source data blocks training rather than inventing statistics.</div>
+    {!data && stage==='idle' && !error && <div className="tc-intro"><BarChart3 size={27}/><strong>Choose a student and press Train</strong><p>No datasets to upload, no manual rules or setup steps.</p></div>}
+    <div className="historical-warning"><ShieldAlert size={15}/> Historical policy replay is not a trained neural checkpoint and does not create persistent learning memories. Separately, the CPU neural learner saves real weights and losses for completed training examples, but these remain unqualified and cannot validate profitability or enable paper/live trading. Unavailable source data blocks training rather than inventing statistics.</div>
   </section>
 }

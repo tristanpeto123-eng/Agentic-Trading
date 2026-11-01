@@ -254,3 +254,39 @@ class ResearchPolicyCandidate(Base):
         Index("ix_policy_student_market_version", "student_id", "market", "version", unique=True),
         Index("ix_policy_candidate_hash", "candidate_sha256", unique=True),
     )
+
+
+class ResearchNeuralRun(Base):
+    """One frozen, research-only candle-outcome learning experiment per student.
+
+    Feature/label records contain TRAIN/development only. Future holdout remains
+    unmaterialised by this training endpoint. No broker or model promotion fields.
+    """
+    __tablename__ = "research_neural_runs"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    student_id: Mapped[str] = mapped_column(String(36), ForeignKey("students.id"), nullable=False)
+    market: Mapped[str] = mapped_column(String(16), nullable=False)
+    tactic: Mapped[str] = mapped_column(String(32), nullable=False)
+    plan_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    snapshot_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    frozen_examples: Mapped[dict] = mapped_column(JSON, nullable=False)
+    epochs_planned: Mapped[int] = mapped_column(Integer, nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False, default="research_only")
+    qualification: Mapped[str] = mapped_column(String(30), nullable=False, default="unqualified")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    __table_args__ = (Index("ix_research_neural_student_created", "student_id", "created_at"),)
+
+
+class ResearchNeuralEpoch(Base):
+    """Immutable neural weights in durable DB binary, not Render's ephemeral filesystem."""
+    __tablename__ = "research_neural_epochs"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    run_id: Mapped[str] = mapped_column(String(36), ForeignKey("research_neural_runs.id"), nullable=False)
+    epoch: Mapped[int] = mapped_column(Integer, nullable=False)
+    weights_npz: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    weights_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    train_loss: Mapped[float] = mapped_column(Float, nullable=False)
+    development_loss: Mapped[float] = mapped_column(Float, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    __table_args__ = (Index("ix_neural_epoch_unique", "run_id", "epoch", unique=True),)
