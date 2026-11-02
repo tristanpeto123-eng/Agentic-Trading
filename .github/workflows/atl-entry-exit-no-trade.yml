@@ -1,0 +1,34 @@
+name: ATL entry exit research vs no-trade
+on:
+  pull_request:
+    paths:
+      - 'research/entry_exit_quality.py'
+      - 'tests/test_entry_exit_quality.py'
+      - 'scripts/evaluate_entry_exit_quality.py'
+      - '.github/workflows/atl-entry-exit-no-trade.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'research/entry_exit_quality.py'
+      - 'tests/test_entry_exit_quality.py'
+      - 'scripts/evaluate_entry_exit_quality.py'
+      - '.github/workflows/atl-entry-exit-no-trade.yml'
+permissions:
+  contents: read
+jobs:
+  offline-quality-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify synthetic momentum, abstention and isolation
+        run: python -m unittest discover -s tests -p 'test_entry_exit_quality.py' -v
+      - name: Regress preexisting strict qualification and quote-cost accounting
+        run: |
+          python -m unittest discover -s tests -p 'test_bid_ask_qualification.py' -v
+          python -m unittest discover -s tests -p 'test_costed_bid_ask_replay.py' -v
+      - name: Syntax and import checks
+        run: python -m compileall -q research/entry_exit_quality.py scripts/evaluate_entry_exit_quality.py
