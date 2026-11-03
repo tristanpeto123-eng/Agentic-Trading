@@ -14,7 +14,9 @@ permissions:
   contents: read
 jobs:
   backup-restore:
-    runs-on: ubuntu-latest
+    # PG16 service needs a matching pg_dump/pg_restore client. The moving
+    # ubuntu-latest image switched to Ubuntu 26.04 with PG18 clients.
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     services:
       postgres:
@@ -45,7 +47,10 @@ jobs:
         run: |
           python -m pip install -e './backend[dev,postgres]' 'numpy>=1.26,<3'
           sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client
+          sudo apt-get install -y -qq postgresql-client-16
+          /usr/lib/postgresql/16/bin/pg_dump --version
+          /usr/lib/postgresql/16/bin/pg_restore --version
+          echo '/usr/lib/postgresql/16/bin' >> "$GITHUB_PATH"
       - name: Migrate and seed only dummy CI data
         run: |
           cd backend
@@ -57,6 +62,8 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
+          test "$(pg_dump --version | awk '{print $3}' | cut -d. -f1)" = "16"
+          test "$(pg_restore --version | awk '{print $3}' | cut -d. -f1)" = "16"
           pg_dump -d trading_ci --no-owner --no-acl --format=custom --file=/tmp/agentic-ci-recovery.dump
           test -s /tmp/agentic-ci-recovery.dump
           createdb trading_restored

@@ -134,7 +134,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @api.get("/health")
     def health():
-        return {"status": "ok", "component": "api", "sprint": "S11"}
+        # Render supplies this non-secret SHA at runtime. Public release
+        # monitoring compares it with GitHub main to detect stale deploys.
+        # Missing/invalid values are unknown, never silently treated as current.
+        revision = os.environ.get("RENDER_GIT_COMMIT", "")
+        commit = revision.lower() if len(revision) == 40 and all(
+            character in "0123456789abcdefABCDEF" for character in revision
+        ) else None
+        return {"status": "ok", "component": "api", "sprint": "S11",
+                "deployed_commit": commit}
 
     def _read_tower(session: Session, ceo_id: str, *, locked: bool = False):
         query = select(EvolutionTowerSession).where(EvolutionTowerSession.ceo_id == ceo_id)
