@@ -1,0 +1,22 @@
+name: Authorized trader history API
+on:
+  pull_request:
+    paths:
+      - 'research/trader_history_api.py'
+      - 'tests/test_trader_history_api.py'
+      - '.github/workflows/trader-history-api.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'research/trader_history_api.py'
+      - 'tests/test_trader_history_api.py'
+      - '.github/workflows/trader-history-api.yml'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m unittest discover -s tests -p 'test_trader_history_api.py' -v
