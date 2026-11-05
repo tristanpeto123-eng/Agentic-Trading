@@ -1,0 +1,24 @@
+name: Academy Tower lineage and trader history
+on:
+  pull_request:
+    paths:
+      - 'research/academy_tower_lineage.py'
+      - 'research/trader_history_import.py'
+      - 'tests/test_academy_lineage_and_trader_history.py'
+      - '.github/workflows/academy-lineage-trader-history.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'research/academy_tower_lineage.py'
+      - 'research/trader_history_import.py'
+      - 'tests/test_academy_lineage_and_trader_history.py'
+      - '.github/workflows/academy-lineage-trader-history.yml'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m unittest discover -s tests -p 'test_academy_lineage_and_trader_history.py' -v
