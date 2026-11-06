@@ -36,7 +36,7 @@ jobs:
         working-directory: frontend
         run: npm run build
   mobile-e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [backend-tests, frontend-build]
     env:
       DATABASE_URL: sqlite:///${{ github.workspace }}/ci_app.sqlite3
