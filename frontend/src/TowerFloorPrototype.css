@@ -11,3 +11,6 @@
 .evo-floor-toggle{border:1px solid #355368;border-radius:9px;background:#163344;color:#9cdeec;padding:9px 12px;font:700 11px system-ui,sans-serif;cursor:pointer}
 .evo-floor-toggle:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:650px){.tower-floor-controls{grid-template-columns:repeat(3,43px);grid-template-rows:repeat(2,44px);gap:4px;bottom:9px;right:8px}.tower-floor-caption{bottom:9px;left:8px;max-width:48%;padding:8px}.tower-floor-caption strong{font-size:9px}.tower-floor-caption span{font-size:8px}.evo-floor-toggle{padding:8px;font-size:9px}}
+
+/* Keep the existing iPhone Tower header accessible with the added view toggle. */
+@media(max-width:650px){.evo-heading{flex-wrap:wrap}.evo-head-right{width:100%;justify-content:space-between;gap:6px}.evo-experiment{flex:0 1 auto}.evo-floor-toggle{flex:1}}
