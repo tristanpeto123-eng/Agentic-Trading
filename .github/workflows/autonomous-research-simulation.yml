@@ -1,0 +1,21 @@
+name: Autonomous research simulation tests
+on:
+  pull_request:
+    paths:
+      - 'research/autonomous_research_simulation.py'
+      - 'tests/test_autonomous_research_simulation.py'
+      - '.github/workflows/autonomous-research-simulation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'research/autonomous_research_simulation.py'
+      - 'tests/test_autonomous_research_simulation.py'
+jobs:
+  research-only-simulation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m unittest discover -s tests -p 'test_autonomous_research_simulation.py' -v
