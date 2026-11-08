@@ -19,6 +19,25 @@ class AutonomousResearchTests(unittest.TestCase):
         self.assertFalse(_pass(m, 100, 1.3, 10))
         self.assertTrue(_score([{"net": -12}], 100, 10)["risk_stopped"])
 
+    def test_risk_stop_excludes_unscored_future_replay_trades(self):
+        # The offline replay has already generated both records. An evaluation
+        # drawdown stop must not count hypothetical recovery after the breach.
+        records = [{"net": -12.0}, {"net": 1000.0}]
+        metrics = _score(records, 100.0, 10.0)
+        self.assertTrue(metrics["risk_stopped"])
+        self.assertEqual(metrics["trades"], 1)
+        self.assertEqual(metrics["replayed_trades"], 2)
+        self.assertEqual(metrics["net"], -12.0)
+        self.assertTrue(metrics["risk_stop_scoring_only"])
+        self.assertFalse(_pass(metrics, 1, 1.3, 10.0))
+
+    def test_no_trade_evaluation_does_not_qualify(self):
+        metrics = _score([], 100.0, 10.0)
+        self.assertEqual(metrics["trades"], 0)
+        self.assertEqual(metrics["replayed_trades"], 0)
+        self.assertFalse(metrics["risk_stopped"])
+        self.assertFalse(_pass(metrics, 1, 1.3, 10.0))
+
     def test_reject_insufficient_holdout(self):
         with tempfile.TemporaryDirectory() as d:
             with patch("research.autonomous_research_simulation.dataset_manifest", return_value={"digest": "test"}), patch(
