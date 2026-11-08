@@ -19,6 +19,13 @@ test('iPhone research tower creates population, advances generations and display
   // First view distinguishes selection B from diagnostic C even if entries=0.
   await expect(tower.getByText(/ENTRIES · TOY B \(SELECTION\)/).first()).toBeVisible()
   await expect(tower.getByRole('img',{name:/Interactive three-dimensional research trading skyscraper/})).toBeVisible()
+  // New floor mode stays read-only and returns to the original orbit view.
+  await tower.getByRole('button',{name:'Explore floor'}).click()
+  await expect(tower.getByRole('img',{name:/Procedural research floor/})).toBeVisible()
+  await expect(tower.getByText(/No verified GLB assets installed/)).toBeVisible()
+  await expect(tower.getByRole('button',{name:'Forward'})).toBeVisible()
+  await tower.getByRole('button',{name:'Orbit tower'}).click()
+  await expect(tower.getByRole('img',{name:/Interactive three-dimensional research trading skyscraper/})).toBeVisible()
   const ids = tower.locator('.evo-agent-row .evo-agent-copy strong')
   const before = await ids.allTextContents()
   expect(before).toHaveLength(16)
