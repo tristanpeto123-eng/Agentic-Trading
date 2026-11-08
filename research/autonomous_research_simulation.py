@@ -42,10 +42,10 @@ def _score(records, capital, max_drawdown_pct):
         losses += max(0.0, -pnl)
         if equity <= 0 or max_dd > max_drawdown_pct:
             return {"trades": len(records), "net": equity - capital,
-                    "profit_factor": gains / losses if losses else (None if not gains else float("inf")),
+                    "profit_factor": gains / losses if losses else (None if not gains else 1e12),
                     "drawdown_pct": max_dd, "risk_stopped": True}
     return {"trades": len(records), "net": equity - capital,
-            "profit_factor": gains / losses if losses else (None if not gains else float("inf")),
+            "profit_factor": gains / losses if losses else (None if not gains else 1e12),
             "drawdown_pct": max_dd, "risk_stopped": False}
 
 
