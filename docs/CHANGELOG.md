@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-14 — One-click private training archive integration
+
+- Add optional server-configured, hash-pinned TRAIN-only XAUUSD BID/ASK M15
+  archive source. Existing one-click student research and neural start work
+  offline without uploading CSVs; invalid configured sources block rather
+  than silently changing datasets.
+- Validate source pairing, UTC/OHLC, hashes, time boundaries, size limits and
+  private path containment. Preserve unknown volume and price gaps.
+- Add adversarial source and authenticated training integration regressions.
+  Full suite passes 393 tests. Complete actual-data 80-epoch local training
+  with persisted weights verified after app restart.
+- Document [private source configuration](PRIVATE_XAU_ARCHIVE.md). Keep global
+  evaluation files out of student training; no hosted deployment, model
+  qualification, broker route or paper/live activation.
+
 ## 2026-11-14 — Public historical source acquired
 
 - Acquire 24 pinned public XAU/USD BID/ASK M1 archive files for 2025 into private

@@ -1,4 +1,4 @@
-"""Sprint 1 CEO app. No broker, order execution or model-training routes exist."""
+"""CEO research app. No broker or order execution routes exist."""
 from __future__ import annotations
 
 from collections import defaultdict, deque
@@ -44,6 +44,7 @@ from agentic_trading.providers.alpaca_crypto_history import fetch_private_btc_hi
 from agentic_trading.providers.xauusd_bidask import (
     QuoteSourceError, fetch_oanda_practice, fetch_dukascopy_research, compare_sources,
 )
+from agentic_trading.providers.private_xau_archive import load_private_xau_archive
 from agentic_trading.settings import Settings
 from agentic_trading.historical_store import DATABASE_ARTIFACT_PATH, store_historical_artifacts, verified_candles
 from agentic_trading.historical_demo import build_historical_demo
@@ -493,6 +494,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Remote XAU research is opt-in; neither feed authorises order routing.
         provider_failures = []
         if "XAUUSD" in targets:
+            archive_manifest = os.environ.get("ATL_XAU_ARCHIVE_MANIFEST", "").strip()
+            if archive_manifest:
+                try:
+                    snapshot = load_private_xau_archive(Path(archive_manifest))
+                except QuoteSourceError as exc:
+                    # A configured frozen source must not silently fall back to
+                    # a different dataset or reserved evaluation period.
+                    raise HTTPException(status_code=409, detail=str(exc)) from exc
+                response.headers["Cache-Control"] = "no-store"
+                return {"student_id": student_id, **snapshot}
             oanda_enabled = os.environ.get("ATL_OANDA_PRACTICE_RESEARCH", "0") == "1"
             dukascopy_enabled = os.environ.get("ATL_DUKASCOPY_RESEARCH_DOWNLOAD", "0") == "1"
             snapshot = None

@@ -1,5 +1,36 @@
 # Validation — 14 November 2026
 
+## Private archive integration — subsequent implementation
+
+- Added a hash-pinned local TRAIN-only BID/ASK source for the existing student
+  Train action and neural-start path; see [configuration](PRIVATE_XAU_ARCHIVE.md).
+- Full regression run: **393 passed**, 6 subtests passed, two dependency
+  deprecation warnings. [Output](evidence/20261114/private-archive-pytest.txt).
+- Covered source tampering/missing files, quote mismatch/crossing, malformed
+  CSV rows, non-training partitions, cutoffs/future candles, directory traversal,
+  symlink escapes, preserved gaps/unknown volume, authentication/CSRF, and
+  configured-source failure without online fallback.
+- Actual acquired archive: created dedicated 13,869-row TRAIN files per side,
+  verified them and served the latest 2,016 paired candles with 22 gaps.
+- Authenticated local app: created isolated research student, completed all
+  80 neural epochs (1,035 training / 193 development examples), then started a
+  new app instance and verified checkpoint/weights recovery. Last observed
+  train loss 0.6391364528328272; development loss 0.6271463338434888. These
+  are training diagnostics, not returns or qualification.
+- Private evidence: `neural_training_report.json` and runtime SQLite database
+  in `/workspace/agentic-private-data/market-data-lab-2025/`.
+- Reserved global development/test data was not provided to this learner.
+  Source authenticity, realistic fills, independent model exam and hosted
+  deployment remain unasserted. No promotion or trading activation occurred.
+- Focused mobile training/recovery regressions: **2 passed**, using the
+  existing iPhone viewport and Chromium against a fresh local app/database.
+  [Output](evidence/20261114/private-archive-mobile.txt).
+
+The first API test run stalled while sandbox networking was restricted.
+It was terminated and rerun with local networking permitted;
+the focused 26 tests and full 393-test run completed normally. Fixture tests
+made no external provider requests.
+
 ## Subsequent data acquisition
 
 Following the owner's instruction to get a data source and omit licensing
