@@ -1,0 +1,39 @@
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_s1, Initial CEO users, students, immutable learning plans and audit events.
+INFO  [alembic.runtime.migration] Running upgrade 0001_s1 -> 0002_s2, Immutable historical dataset metadata; raw files stored out-of-repo.
+INFO  [alembic.runtime.migration] Running upgrade 0002_s2 -> 0003_s5, Append-only closed trade research archive.
+INFO  [alembic.runtime.migration] Running upgrade 0003_s5 -> 0004_s6, Research-only neural training jobs and immutable checkpoint indexes.
+INFO  [alembic.runtime.migration] Running upgrade 0004_s6 -> 0005_s7, Offline immutable-by-service research examination reports.
+INFO  [alembic.runtime.migration] Running upgrade 0005_s7 -> 0006_s8, Persistent research Academy jobs. Revision ID 0006_s8, revises 0005_s7.
+INFO  [alembic.runtime.migration] Running upgrade 0006_s8 -> 0007_s9, Research Strategy DNA and non-authoritative peer lessons.
+INFO  [alembic.runtime.migration] Running upgrade 0007_s9 -> 0008_s10, Latched CEO emergency stop. Revision ID 0008_s10, revises 0007_s9.
+INFO  [alembic.runtime.migration] Running upgrade 0008_s10 -> 0009_s11, Blocked CEO paper pilot review, no trading orders. Revision 0009_s11 from 0008_s10.
+INFO  [alembic.runtime.migration] Running upgrade 0009_s11 -> 0010_s12, Persist XAUUSD historical bytes in DB for ephemeral Render web previews.
+INFO  [alembic.runtime.migration] Running upgrade 0010_s12 -> 0011_s13, Add immutable research policy candidate snapshots; no active execution state.
+INFO  [alembic.runtime.migration] Running upgrade 0011_s13 -> 0012_s14, Durable research neural training snapshots and immutable epoch weights.
+INFO  [alembic.runtime.migration] Running upgrade 0012_s14 -> 0013_tower, Evolution Tower persistence, research-only.
+
+Running 10 tests using 1 worker
+
+(node:5690) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5690) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 e2e/academy-study.mobile.spec.ts:8:1 › iPhone Academy uses a saved XAUUSD dataset for five-batch progression (4.5s)
+  ✓   2 e2e/agent-trace.mobile.spec.ts:14:1 › iPhone S4 research trace reports real regime, withheld Scout B, and no broker orders (2.9s)
+  ✓   3 e2e/evolution-tower.mobile.spec.ts:2:1 › iPhone research tower creates population, advances generations and displays genuine persisted events (14.2s)
+  ✓   4 e2e/historical.mobile.spec.ts:5:1 › iPhone Historical: import quarantined XAUUSD M15, inspect and play candles (39.8s)
+  ✓   5 e2e/m1-bid-ask.mobile.spec.ts:15:1 › iPhone M1 BID/ASK quote inspector is local, aligned and explicitly unqualified (14.9s)
+  ✓   6 e2e/m1-bid-ask.mobile.spec.ts:51:1 › iPhone M1 BID/ASK refuses nonmatching and crossed opening quotes (10.8s)
+  ✓   7 e2e/neural-signal-recovery.mobile.spec.ts:4:1 › mobile: a legacy neural run is replaced by compatible checkpoint and displays saved model signal (8.3s)
+  ✓   8 e2e/simulation.mobile.spec.ts:15:1 › iPhone simulator: load local M15 data and inspect stepwise BUY decisions, no broker orders (13.4s)
+  ✓   9 e2e/sprint1.mobile.spec.ts:8:1 › mobile CEO login, student lifecycle, and disabled trading (26.0s)
+  ✓  10 e2e/training-cockpit.mobile.spec.ts:37:1 › one click Trading: choose student, train, watch stats tick without CSV (11.0s)
+
+  10 passed (2.5m)
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2
+npm notice To update run: npm install -g npm@12.2.2
+npm notice

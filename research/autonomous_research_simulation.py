@@ -29,11 +29,18 @@ def _signals(closes, skill, start, end):
 
 
 def _score(records, capital, max_drawdown_pct):
+    """Score only through the first risk breach; replay itself is not a kill switch.
+
+    The pure offline replay may already have produced later trades. Disclose
+    their count separately instead of counting them toward the risk-stopped
+    evaluation or implying that real-world execution was halted.
+    """
     equity = capital
     peak = capital
     max_dd = 0.0
     gains = losses = 0.0
-    for trade in records:
+    evaluated = 0
+    for evaluated, trade in enumerate(records, start=1):
         pnl = trade["net"]  # one unit, unleveraged, costs already deducted
         equity += pnl
         peak = max(peak, equity)
@@ -41,12 +48,16 @@ def _score(records, capital, max_drawdown_pct):
         gains += max(0.0, pnl)
         losses += max(0.0, -pnl)
         if equity <= 0 or max_dd > max_drawdown_pct:
-            return {"trades": len(records), "net": equity - capital,
+            return {"trades": evaluated, "replayed_trades": len(records),
+                    "net": equity - capital,
                     "profit_factor": gains / losses if losses else (None if not gains else 1e12),
-                    "drawdown_pct": max_dd, "risk_stopped": True}
-    return {"trades": len(records), "net": equity - capital,
+                    "drawdown_pct": max_dd, "risk_stopped": True,
+                    "risk_stop_scoring_only": True}
+    return {"trades": evaluated, "replayed_trades": len(records),
+            "net": equity - capital,
             "profit_factor": gains / losses if losses else (None if not gains else 1e12),
-            "drawdown_pct": max_dd, "risk_stopped": False}
+            "drawdown_pct": max_dd, "risk_stopped": False,
+            "risk_stop_scoring_only": True}
 
 
 def _pass(metrics, min_trades, min_pf, max_dd):

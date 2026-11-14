@@ -1,0 +1,59 @@
+# Validation — 14 November 2026
+
+Source baseline: `2ed2c5cdd69c5ea18a1fe48cf3ff2333b1d09e10`.
+Working branch: `finish/research-validation-20261114`.
+Scope: local research build and risk-stop trade-count correction. No release,
+dataset qualification, model promotion or trading approval is asserted.
+
+Recovered prior candidate: [PR #76](https://github.com/tristanpeto123-eng/Agentic-Trading/pull/76),
+head `bd38e193ff1f6224afb3937831e7a281b2d7a79e`, open and unmerged.
+The local simulation implementation matches that candidate exactly, including
+separate evaluated/replayed counts and an explicit scoring-only stop flag.
+This work additionally exercises actual synthetic CSVs through the complete
+manifest/replay/selector/sealed-report pipeline without mocking its components.
+
+## Observed checks
+
+- Python 3.12, CPU PyTorch 2.15.0, NumPy 2.3.5; isolated workspace venv.
+- `python -m pytest backend/tests tests research/cfd_arena -q`: **PASS**,
+  378 tests and 6 subtests, two dependency deprecation warnings.
+  [Captured output](evidence/20261114/pytest.txt).
+- After alignment with PR #76 and addition of the CSV integration test:
+  targeted autonomous replay suite **PASS**, 7 tests.
+  [Captured output](evidence/20261114/autonomous-replay.txt).
+  The full-suite result above predates that alignment; backend code is unchanged.
+- `cd frontend && npm run build`: **PASS**, TypeScript and Vite production build.
+  Vite reports a large JavaScript bundle (914.83 kB before gzip).
+- API route audit: **PASS**, no broker or order routes registered.
+- Fresh SQLite Alembic migration: **PASS**, base through `0013_tower` during
+  browser-test setup. PostgreSQL recovery drill: **NOT RUN**.
+- Mobile Chromium suite: **PASS**, all 10 tests, against local API and Vite
+  with a freshly migrated SQLite database and disposable CEO credentials.
+  Used installed `/usr/bin/chromium` with the existing iPhone viewport via a
+  temporary Playwright config; servers stopped and config removed afterward.
+  [Captured output](evidence/20261114/mobile.txt).
+- Public hosted `/health`: **PASS**, returned `status=ok` and
+  `deployed_commit=0349475b6beb69ac981e58fa921882b67d92734e`.
+  This differs from the baseline above; deployment parity is **NOT MET**.
+  Hosted authenticated security smoke: **NOT RUN**.
+
+The initial backend run lacked PyTorch (16 failures, 361 passes, one skip).
+Installing the documented CPU training dependency resolved all failures on the
+subsequent full run. Sandbox installation paths were moved into `/workspace`
+and npm cache into `/tmp`; no sandbox escalation was needed.
+
+## Remaining completion evidence
+
+The current release plan still requires independently attested data rights,
+authentic historical bid/ask coverage, sealed independent evaluation, and
+model-to-signal/replay evidence on eligible data. No eligible private dataset
+was supplied in this workspace. Local tests use fixtures and cannot close those
+gates. The 31 October planning score has not been recertified or increased.
+See [release criteria](RELEASE_95_PLAN.md).
+The latest 8 November checkpoint in [issue #18](https://github.com/tristanpeto123-eng/Agentic-Trading/issues/18)
+also confirms those external gates. [Issue #65](https://github.com/tristanpeto123-eng/Agentic-Trading/issues/65)
+requires owner-side Render/GitHub credential and app-installation verification;
+a manual redeploy would not establish repair of the Git trigger.
+
+No owner acceptance or approval register was created or changed. Current
+project-specific approval registers were not present in the recovered repository.

@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-14 — Research replay validation candidate
+
+- Recover the existing unmerged PR #76 risk-stop correction and validate locally.
+  Risk-stop reports count only processed trades. Previously the
+  count included later trades whose P&L was excluded after the stop.
+- Preserve PR #76 risk-stop and no-trade regressions; add an end-to-end
+  synthetic CSV regression for an unqualified flat-market research result.
+- Validate the recovered current research source locally and record hosted
+  revision mismatch in [TEST_RESULTS.md](TEST_RESULTS.md).
+- Local review candidate only; no merge, deployment, qualification or execution
+  activation. Existing release and owner acceptance gates remain unchanged.
+
 ## 0.0.1 — 2026-10-25 — Sprint 0 foundation
 
 - Initial independent Agentic Trading local development scaffold.
