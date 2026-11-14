@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-14 — Public historical source acquired
+
+- Acquire 24 pinned public XAU/USD BID/ASK M1 archive files for 2025 into private
+  workspace storage; verify source digests and retain acquisition metadata.
+- Normalize UTC timestamps, record stagnant/weekend exclusions and preserve
+  original downloads. Produce 349,383 screened M1 pairs and 23,276 complete M15
+  windows per side, with app-import validation and chronological manifests.
+- Complete an actual-data fixed-skill integration smoke; flat/no-trade outcome
+  fails numerical research gates. No model qualification or trading activation.
+- Record [source and quality evidence](DATA_SOURCE_20261114.md). Licensing
+  review omitted at owner request; no raw prices added to the public repository.
+
 ## 2026-11-14 — Research replay validation candidate
 
 - Recover the existing unmerged PR #76 risk-stop correction and validate locally.

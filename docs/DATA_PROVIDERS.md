@@ -1,5 +1,17 @@
 # Market data sources — private research qualification
 
+## 14 November 2026 — acquired public XAU/USD history
+
+Downloaded the 2025 BID/ASK M1 public archive from `kevingtlin/Market-Data-Lab`,
+pinned to commit `b60bd71d0e34a42cb962daf688ff252e73f409ca`. Raw files,
+screened M1/M15 exports, source hashes and quality reports are stored privately
+outside this public repository. See [acquisition evidence](DATA_SOURCE_20261114.md).
+Licensing review was omitted per current owner direction; verification remains
+unasserted. This supersedes the absence-of-a-local-source statement for further
+exploratory work, without certifying the archive or a model.
+
+## Historical register — 31 October 2026
+
 Updated 31 October 2026. This is a status register, not a blanket licence
 clearance or permission to enable paper/live trading.
 
