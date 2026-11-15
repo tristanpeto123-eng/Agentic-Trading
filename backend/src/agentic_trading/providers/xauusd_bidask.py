@@ -88,15 +88,15 @@ def _pair(timestamp: datetime, bid: dict[str, Decimal],
     if isinstance(volume, bool) or isinstance(volume, (dict, list)):
         raise QuoteSourceError("Invalid quote volume")
     try:
-        observed = Decimal(str(volume))
+        observed = Decimal(str(volume)) if volume is not None else None
     except (InvalidOperation, ValueError, TypeError) as exc:
         raise QuoteSourceError("Invalid quote volume") from exc
-    if not observed.is_finite() or observed < 0:
+    if observed is not None and (not observed.is_finite() or observed < 0):
         raise QuoteSourceError("Invalid quote volume")
     return {
         "open_time": timestamp.isoformat().replace("+00:00", "Z"),
         "available_at": (timestamp + timedelta(minutes=15)).isoformat().replace("+00:00", "Z"),
-        **mid, "volume": _stamp(observed),
+        **mid, "volume": _stamp(observed) if observed is not None else None,
         "bid": {key: _stamp(bid[key]) for key in bid},
         "ask": {key: _stamp(ask[key]) for key in ask},
     }

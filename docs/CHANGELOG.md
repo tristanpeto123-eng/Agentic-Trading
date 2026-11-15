@@ -1,5 +1,55 @@
 # Changelog
 
+## 2026-11-15 — Authorized research release preparation
+
+- Owner authorizes publishing and deploying the prepared research build.
+- Restore a bounded private TRAIN archive from backend configuration at startup,
+  with compressed/source hashes, size limits, containment checks and atomic
+  installation; ephemeral instances recover the same training window.
+- Preserve unrelated Render configuration and existing accounts. No raw quotes,
+  private payloads or credentials are committed to the public repository.
+- Add startup/restart/tampering/partition/path/size regressions; full suite passes
+  403 tests. The release remains research-only, with no trading activation.
+
+## 2026-11-14 — One-click private training archive integration
+
+- Add optional server-configured, hash-pinned TRAIN-only XAUUSD BID/ASK M15
+  archive source. Existing one-click student research and neural start work
+  offline without uploading CSVs; invalid configured sources block rather
+  than silently changing datasets.
+- Validate source pairing, UTC/OHLC, hashes, time boundaries, size limits and
+  private path containment. Preserve unknown volume and price gaps.
+- Add adversarial source and authenticated training integration regressions.
+  Full suite passes 393 tests. Complete actual-data 80-epoch local training
+  with persisted weights verified after app restart.
+- Document [private source configuration](PRIVATE_XAU_ARCHIVE.md). Keep global
+  evaluation files out of student training; no hosted deployment, model
+  qualification, broker route or paper/live activation.
+
+## 2026-11-14 — Public historical source acquired
+
+- Acquire 24 pinned public XAU/USD BID/ASK M1 archive files for 2025 into private
+  workspace storage; verify source digests and retain acquisition metadata.
+- Normalize UTC timestamps, record stagnant/weekend exclusions and preserve
+  original downloads. Produce 349,383 screened M1 pairs and 23,276 complete M15
+  windows per side, with app-import validation and chronological manifests.
+- Complete an actual-data fixed-skill integration smoke; flat/no-trade outcome
+  fails numerical research gates. No model qualification or trading activation.
+- Record [source and quality evidence](DATA_SOURCE_20261114.md). Licensing
+  review omitted at owner request; no raw prices added to the public repository.
+
+## 2026-11-14 — Research replay validation candidate
+
+- Recover the existing unmerged PR #76 risk-stop correction and validate locally.
+  Risk-stop reports count only processed trades. Previously the
+  count included later trades whose P&L was excluded after the stop.
+- Preserve PR #76 risk-stop and no-trade regressions; add an end-to-end
+  synthetic CSV regression for an unqualified flat-market research result.
+- Validate the recovered current research source locally and record hosted
+  revision mismatch in [TEST_RESULTS.md](TEST_RESULTS.md).
+- Local review candidate only; no merge, deployment, qualification or execution
+  activation. Existing release and owner acceptance gates remain unchanged.
+
 ## 0.0.1 — 2026-10-25 — Sprint 0 foundation
 
 - Initial independent Agentic Trading local development scaffold.

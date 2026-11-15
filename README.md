@@ -41,6 +41,11 @@ python -m pytest backend/tests -q
 cd frontend && npm run build
 ```
 
+For an already acquired paired XAUUSD archive, the optional
+[private TRAIN-only source](docs/PRIVATE_XAU_ARCHIVE.md) supplies the existing
+student Train action without CSV uploads or online downloads. Configure its
+hash-pinned manifest in the backend; reserved evaluation files are kept separate.
+
 `pip install -e './backend[dev,postgres]'` includes PostgreSQL driver; use `DATABASE_URL=postgresql+psycopg://...` and run Alembic migrations before deploying. Production also requires HTTPS, fixed `SESSION_SECRET`, approved origins, multi-worker throttling, backups, operational monitoring and security review. **Don't put this dev server on the public internet.**
 
 ## Sprint 1 and 2 functionality

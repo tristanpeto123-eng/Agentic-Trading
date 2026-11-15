@@ -15,4 +15,5 @@ mkdir -p /data/data_store
 cd /app/backend
 python -m alembic -c alembic.ini upgrade head
 cd /app
+python -m agentic_trading.providers.archive_bootstrap
 exec python -m uvicorn agentic_trading.api:app --host 0.0.0.0 --port "${PORT:-8080}" --workers 1
