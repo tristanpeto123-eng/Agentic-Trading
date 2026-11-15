@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Bot, ChevronDown, ChevronUp, CirclePause, Dna, GitBranch, Layers3, Play, RotateCw, ShieldAlert, ShieldCheck, Skull, Trophy } from 'lucide-react'
 import { api } from './api'
 import { EvolutionTowerScene } from './EvolutionTowerScene'
+import { TowerFloorPrototype } from './TowerFloorPrototype'
 import type { TowerAgent, TowerEvent } from './EvolutionTowerScene'
 import './EvolutionTower.css'
 
@@ -27,6 +28,7 @@ export function EvolutionTower(){
   const [source,setSource]=useState<'oanda'|'dukascopy'>('oanda')
   const [showArchive,setShowArchive]=useState(false)
   const [expanded,setExpanded]=useState(true)
+  const [floorPreview,setFloorPreview]=useState(false)
   const agents=state?.agents??[]
   const real=state?.mode==='REAL_XAUUSD_BID_ASK_RESEARCH'
   const events=state?.last_events??[]
@@ -84,6 +86,10 @@ export function EvolutionTower(){
       </div>
       <div className="evo-head-right">
         <span className="evo-experiment"><span/> {real?'REAL PRICE RESEARCH':'SYNTHETIC RESEARCH'}</span>
+        <button type="button" className="evo-floor-toggle" disabled={!state?.initialized}
+          aria-pressed={floorPreview} onClick={()=>setFloorPreview(value=>!value)}>
+          {floorPreview?'Orbit tower':'Explore floor'}
+        </button>
         <button className="evo-collapse" aria-label={expanded?'Collapse tower':'Expand tower'}
           onClick={()=>setExpanded(!expanded)}>{expanded?<ChevronUp size={19}/>:<ChevronDown size={19}/>}</button>
       </div>
@@ -99,15 +105,18 @@ export function EvolutionTower(){
       <div className="evo-workspace">
         <div className="evo-stage">
           {state?.initialized ? <>
-            <EvolutionTowerScene agents={agents} events={events} selectedId={selectedId} onSelect={setSelectedId}/>
-            <div className="evo-view-top"><span>CAM 01 · ORBIT VIEW</span><button type="button" className="evo-full-view" onClick={()=>setSelectedId(null)}>Full tower</button></div>
-            <div className="evo-view-legend">
+            {floorPreview ? <TowerFloorPrototype
+              agents={agents.filter(agent=>agent.floor===(selected?.floor??1))}
+              floor={selected?.floor??1} selectedId={selectedId} onSelect={setSelectedId} /> :
+              <EvolutionTowerScene agents={agents} events={events} selectedId={selectedId} onSelect={setSelectedId}/>}
+            <div className="evo-view-top"><span>{floorPreview?'CAM 02 · PROCEDURAL FLOOR':'CAM 01 · ORBIT VIEW'}</span><button type="button" className="evo-full-view" onClick={()=>{setSelectedId(null);setFloorPreview(false)}}>Full tower</button></div>
+            {!floorPreview&&<div className="evo-view-legend">
               <span><i className="evo-dot nursery"/> Nursery</span>
               <span><i className="evo-dot survivor"/> Survivors</span>
               <span><i className="evo-dot leader"/> Research leader</span>
               <span><i className="evo-dot probation"/> Probation</span>
-            </div>
-            <div className="evo-zoom-help">Drag to orbit · pinch to zoom · tap a robot</div>
+            </div>}
+            {!floorPreview&&<div className="evo-zoom-help">Drag to orbit · pinch to zoom · tap a robot</div>}
           </>:<div className="evo-empty">
             <Layers3 size={42}/>
             <strong>YOUR EVOLUTION TOWER</strong>
