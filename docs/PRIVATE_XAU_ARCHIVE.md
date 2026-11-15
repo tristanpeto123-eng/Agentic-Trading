@@ -74,4 +74,32 @@ The learner's development partition is nested **inside** the global TRAIN
 partition. Existing neural labels use midpoint features and assumed fixed
 friction, not independently verified BID/ASK executions. Training loss is not
 profitability evidence. The model stays unqualified, with no paper/live order
-routes or model promotion. This change has not been deployed to Render.
+routes or model promotion.
+
+## Hosted instance restoration
+
+For a service with an ephemeral filesystem, `archive_bootstrap` restores a
+small, dedicated training window from private backend configuration at startup.
+The release bundle contains only the latest 2,016 TRAIN candles per side, not
+the full year or reserved evaluation files. It reproduces the same candle
+fingerprint as the larger local archive.
+
+The deployment operator supplies a gzip/base64 JSON bundle containing `manifest`
+and exactly the two referenced CSV `files`. Set `ATL_XAU_ARCHIVE_CHUNKS`,
+`ATL_XAU_ARCHIVE_PART_000` onward, and `ATL_XAU_ARCHIVE_BUNDLE_SHA256` in private
+service configuration. Each part is at most 16,000 characters; at most 16 parts
+are accepted. Decompressed content is bounded to 512,000 bytes. The configured
+`ATL_XAU_ARCHIVE_MANIFEST` must be an absolute path ending in
+`/<bundle-sha256>/manifest.json`.
+
+Startup verifies the compressed digest, paths, training cutoff, CSV digests and
+quote structure before atomically installing private files with mode 0600.
+A corrupt configured bundle stops startup rather than substituting another
+source. A restart verifies existing artifacts; it never silently repairs changed
+files. Render backend configuration, not the public Git repository, retains the
+encoded quote payload. Changing those variables requires an ordinary deployment
+before the running app uses them.
+
+The preview entrypoint runs restoration after migrations and before Uvicorn.
+Its readiness log prints the paired candle count and source fingerprint, without
+prices, private CSV contents, credentials or encoded payloads.

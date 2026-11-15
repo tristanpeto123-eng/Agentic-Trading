@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-15 — Authorized research release preparation
+
+- Owner authorizes publishing and deploying the prepared research build.
+- Restore a bounded private TRAIN archive from backend configuration at startup,
+  with compressed/source hashes, size limits, containment checks and atomic
+  installation; ephemeral instances recover the same training window.
+- Preserve unrelated Render configuration and existing accounts. No raw quotes,
+  private payloads or credentials are committed to the public repository.
+- Add startup/restart/tampering/partition/path/size regressions; full suite passes
+  403 tests. The release remains research-only, with no trading activation.
+
 ## 2026-11-14 — One-click private training archive integration
 
 - Add optional server-configured, hash-pinned TRAIN-only XAUUSD BID/ASK M15

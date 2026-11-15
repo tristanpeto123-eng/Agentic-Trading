@@ -1,5 +1,27 @@
 # Validation — 14 November 2026
 
+## Approved release preparation — 15 November 2026 UTC
+
+The owner authorized publication and deployment with “Approve all and complete”
+and explicitly confirmed Render's “My Workspace”. This authorizes the prepared
+research release and its private training-data configuration; it is not evidence
+of source certification, independent model qualification or order-execution scope.
+
+- Add startup restoration of a bounded, hash-pinned private training bundle so
+  ephemeral hosted instances recover their source after restart.
+- Full release suite: **403 passed**, 6 subtests passed, two dependency warnings.
+  [Captured output](evidence/20261114/release-pytest.txt).
+- Ten focused bootstrap regressions passed, including restart, source tampering,
+  bundle integrity, partition rejection, path traversal and size/count limits.
+- The actual deployment bundle restores 2,016 paired TRAIN M15 candles with the
+  same `c913ac2086f1578011102cc2d178a48d434cbc46d2b2d1d1329bb69b9b24d265`
+  candle fingerprint as the previously trained local source.
+- Deployment configuration contains five bounded payload parts; raw quote data
+  remains outside Git. No service plan, account credentials or order routes are
+  changed by this configuration.
+- GitHub CI is checked before merge; deployment is reported complete only after
+  Render reaches live and public smoke checks pass.
+
 ## Private archive integration — subsequent implementation
 
 - Added a hash-pinned local TRAIN-only BID/ASK source for the existing student
